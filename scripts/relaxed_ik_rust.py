@@ -12,7 +12,7 @@ import yaml
 from relaxed_ik_ros1.srv import IKPose, IKPoseResponse
 from relaxed_ik_ros1.msg import EEPoseGoals, EEVelGoals
 from geometry_msgs.msg import Point
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Float64MultiArray
 from sensor_msgs.msg import JointState 
 from urdf_parser_py.urdf import URDF
 from kdl_parser import kdl_tree_from_urdf_model
@@ -83,6 +83,7 @@ class RelaxedIK:
         # Subscribers
         rospy.Subscriber('/relaxed_ik/ee_pose_goals', EEPoseGoals, self.pose_goals_cb)
         rospy.Subscriber('/relaxed_ik/ee_vel_goals', EEVelGoals, self.pose_vels_cb)
+        rospy.Subscriber('/relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, self.hiro_pose_vels_cb)
         rospy.Subscriber('/relaxed_ik/reset', JointState, self.reset_cb)
 
         print("\nSolver RelaxedIK initialized!\n")
@@ -197,6 +198,32 @@ class RelaxedIK:
         assert len(ik_solution) == len(self.robot.articulated_joint_names)
 
         # Publish the joint angle solution
+        self.js_msg.header.stamp = rospy.Time.now()
+        self.js_msg.position = ik_solution
+        self.angles_pub.publish(self.js_msg)
+
+    def hiro_pose_vels_cb(self, msg):
+        quat_goal = []
+        linear_vels = msg.data[:3]
+        quat_goal = msg.data[3:7]
+        print("quat goal", quat_goal)
+        tolerances = []
+        for j in range(6):
+            tolerances.append(0.0)
+        quat_line = msg.data[7:10]
+        cone_params = msg.data[10:14]
+        x_a = msg.data[14:17]
+        x_g = msg.data[17:20]
+        history_len = len(msg.data[20:])
+        history_len = int(history_len/3)
+        print(history_len)
+        x_history = msg.data[20:(20+history_len)]
+        y_history = msg.data[(20+history_len):(20+history_len*2)]
+        z_history = msg.data[(20+history_len*2):]
+        ik_solution = self.relaxed_ik.hiro_solve_velocity(linear_vels, quat_goal, tolerances, quat_line, cone_params, x_a, x_g, x_history, y_history, z_history)
+
+        assert len(ik_solution) == len(self.robot.articulated_joint_names)
+
         self.js_msg.header.stamp = rospy.Time.now()
         self.js_msg.position = ik_solution
         self.angles_pub.publish(self.js_msg)

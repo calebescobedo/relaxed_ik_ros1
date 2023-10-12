@@ -41,14 +41,14 @@ class RvizViewer:
         
         urdf_file = open(path_to_src + '/configs/urdfs/' + settings["urdf"], 'r')
         urdf_string = urdf_file.read()
-        rospy.set_param('robot_description', urdf_string)
+        # rospy.set_param('robot_description', urdf_string)
 
         self.robot = Robot(setting_file_path)
 
-        subprocess.Popen(["roslaunch", "relaxed_ik_ros1", "rviz_viewer.launch", 
-                                                "fixed_frame:=" + settings['base_links'][0]])
+        # subprocess.Popen(["roslaunch", "relaxed_ik_ros1", "rviz_viewer.launch", 
+        #                                         "fixed_frame:=" + settings['base_links'][0]])
 
-        self.js_pub = rospy.Publisher('joint_states',JointState,queue_size=5)
+        self.js_pub = rospy.Publisher('joint_states',JointState,queue_size=1)
         self.js_msg = JointState()
         self.js_msg.name = self.robot.all_joint_names
         self.js_msg.position = [0] * len(self.robot.all_joint_names)
@@ -86,7 +86,7 @@ class RvizViewer:
         self.js_msg.header.stamp = rospy.Time.now()
         for i in range(len(msg.name)):
             self.js_msg.position[self.robot.all_joint_names.index(msg.name[i])] = msg.position[i]
-        self.js_pub.publish(self.js_msg)
+        # self.js_pub.publish(self.js_msg)
 
     def ee_pose_goal_cb(self, msg):
         assert len(msg.ee_poses) == self.robot.num_chain
