@@ -43,13 +43,84 @@ class GraspLoop:
             "x_goal": None,
             "grasp": False
         }
-        self.grasp_list = [ [0.3083738299097709, 0.0006939567249744376, 0.4882103742244395, 0.999962320185936, 0.005622019321942197, -0.0065000256284631856, 0.0012250607873021827],
-                            [0.37916816588763497, 0.2233013606367945, 0.23232373040696624, 0.999996409699099, -0.0023218065447703795, -0.0006148373571428909, 0.0011881827741044206],
-                            [0.3083738299097709, 0.0006939567249744376, 0.4882103742244395, 0.999962320185936, 0.005622019321942197, -0.0065000256284631856, 0.0012250607873021827],
-                            [0.31894155865751106, -0.3444966102052268, 0.5994018535004714, 0.9999951604135534, -0.002163468215427447, -0.00019575067345202794, 0.002227158823755997]
+
+        # above grasp location
+        self.home_pose = home_pose
+        # changed
+        self.buck_1_above = [0.3129423681879522, -0.21711951818103156, 0.5096769891475014, 0.9724603774917229, 0.23306316012024939, -0.0007879400958739763, 0.001325425902880112]
+        self.buck_1_grasp = [0.3206556692342491, -0.2222632319834768, 0.21534691079446193,  0.9724603774917229, 0.23306316012024939, -0.0007879400958739763, 0.001325425902880112]
+        self.buck_2_above = [0.40075268917469536, 0.028393977251948053, 0.5353989375144522, 0.9035933565400712, 0.42838859598905904, -0.001021221727395438, 0.0011017936984341727]
+        self.buck_2_grasp = [0.4127634193891013, 0.036322297981884265, 0.22023352428951987, 0.904126293634331, 0.42725965337549326, -0.0017685925307008453, 0.0013060769353346385]
+
+        self.buck_3_above = [0.5262428347230959, 0.3263530180818972, 0.5025369582819585, 0.9093776557711967, 0.41596866143251887, -0.0010512174836509929, 0.0011166162829691305]
+        self.buck_3_grasp = [0.5310481102874148, 0.33382287998676347, 0.2205409416096762, 0.9119910218737294, 0.4102073590406663, -0.0010201797492477088, 0.001121536388988623]
+
+
+        # unchanged
+
+
+        # grasp location
+        self.__grasp_flag = [1]
+        self.__release_flag = [0]
+        self.__wait_flag = [3]
+
+        # for 3 bucket dialysis
+
+        self.grasp_list = [self.home_pose, 
+                           self.buck_1_above,
+                           self.buck_1_grasp,
+                           self.__grasp_flag,
+                           self.buck_1_above,
+                           self.buck_2_above,
+                           self.buck_2_grasp,
+                           self.__release_flag,
+                           self.buck_2_above,
+                           self.buck_2_grasp,
+                           self.__grasp_flag,
+                           self.buck_2_above,
+                           self.buck_3_above,
+                           self.buck_3_grasp,
+                           self.__release_flag,
+                           self.buck_3_above,
+                           self.buck_3_grasp,
+                           self.__grasp_flag,
+                           self.buck_3_above,
+                           self.buck_1_above,
+                           self.buck_1_grasp,
+                           self.__release_flag,
+                           self.buck_1_above
         ]
+        # self.grasp_list = [self.home_pose,
+        #                    self.buck_1_above,
+        #                    self.buck_1_grasp,
+        #                    self.__grasp_flag,
+        #                    self.buck_1_above,
+        #                    self.home_pose, 
+        #                    self.buck_2_above,
+        #                    self.buck_2_grasp,
+        #                    self.__release_flag,
+        #                    self.buck_2_above,
+        #                    self.home_pose,
+        #                    self.__wait_flag,
+        #                    self.buck_2_above,
+        #                    self.buck_2_grasp,
+        #                    self.__grasp_flag,
+        #                    self.buck_2_above,
+        #                    self.home_pose,
+        #                    self.buck_1_above,
+        #                    self.buck_1_grasp,
+        #                    self.__release_flag,
+        #                    self.buck_1_above,
+        #                    self.home_pose,
+        #                    self.__wait_flag]
         
         self.cur_list_idx = 0
+
+        self.__start_buck_2 = False
+        if self.__start_buck_2:
+            self.cur_list_idx = 10
+
+
         self.__hiro_g = hiro_grasp.hiro_grasp()
         self.__pose_order_list = self.set_pose_order_list(flag)
         self.__cur_idx = 0 
@@ -125,17 +196,38 @@ class GraspLoop:
             return True
         return False
 
+    def __inc_pose_list(self):
+        self.cur_list_idx += 1 
+        self.cur_list_idx = self.cur_list_idx % len(self.grasp_list)
+        self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+
+    def wait_time_seconds(self, s):
+        rospy.sleep(s)
+
     def check_next_state(self, error):
-        error_bound = 0.02
+        error_bound = 0.015
         error_sum = sum([abs(elem) for elem in error])
         ret = False    
         
         print("error sum: ", error_sum)
         if error_sum < error_bound:
+
+            # Dialysis pick and place!!!! Diane!!
             if not self.__pose_order_list:
-                self.cur_list_idx += 1 
-                self.cur_list_idx = self.cur_list_idx % len(self.grasp_list)
-                self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+                self.__inc_pose_list()
+                if self.grasp_list[self.cur_list_idx] == self.__grasp_flag:
+                    self.__hiro_g.set_grasp_width(0.02)
+                    self.__hiro_g.grasp()
+                    rospy.sleep(1.0)
+                    self.__inc_pose_list()
+                elif self.grasp_list[self.cur_list_idx] == self.__release_flag:
+                    self.__hiro_g.open()
+                    rospy.sleep(1.0)
+                    self.__inc_pose_list()
+                if self.grasp_list[self.cur_list_idx] == self.__wait_flag:
+                    sleep_time = 300
+                    self.wait_time_seconds(sleep_time)
+                    self.__inc_pose_list()
                 return ret
             if self.__pose_order_list[self.__cur_idx] == "x_d":
                 self.__hiro_g.open()
@@ -185,7 +277,7 @@ class XboxInput:
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
         self.pos_stride = 0.005
         self.rot_stride = 0.0125
-        self.p_t = 0.007
+        self.p_t = 0.01
         self.p_r = 0.001
         self.rot_error = [0.0, 0.0, 0.0]
 
@@ -736,7 +828,7 @@ class XboxInput:
         franka_pose = []
         franka_pose.extend(self.fr_position)
         franka_pose.extend(fr_quat)
-        print("fraka pose: ", franka_pose)
+        # print("fraka pose: ", franka_pose)
         # print("FR_position:", self.fr_position)
         # print("FR_quat:", fr_quat)
         # print('FR EUler: ', fr_e)

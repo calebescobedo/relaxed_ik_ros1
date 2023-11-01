@@ -12,10 +12,10 @@ class hiro_grasp:
 
     def __set_open_grasp(self):
         self.__width = 0.1
-        self.__inner = 0.020
-        self.__outer = 0.020
+        self.__inner = 0.010
+        self.__outer = 0.010
         self.__speed = 0.1
-        self.__force = 30
+        self.__force = 2
 
     def grasp(self):
         client = actionlib.SimpleActionClient('/franka_gripper/grasp', franka_gripper.msg.GraspAction)
