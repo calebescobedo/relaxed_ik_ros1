@@ -33,15 +33,14 @@ class grasp_vis:
         rospy.Subscriber("/grasp_net/grasp6d", Float32MultiArray, self.grasp_callback)
         rospy.spin()
 
-
-
     def axis_callback(self, event):
         trans, rot= None,None
         trans1, rot1 = None, None
         self.mutex.acquire()
         self.time = rospy.Time.now()
-        self.br.sendTransform((0.815599, 0.0531572, 0.761237),
-                         (0.677933, 0.668852, -0.220797, -0.210456),                        
+        # x y z, z is up down, y side to side, x is forward and back 
+        self.br.sendTransform((0.485177, -1.09463 , 1.42747 ),
+                         (0.876182, -0.0473996 ,0.0261565, -0.47893),                        
                          self.time,
                          "kinect2_rgb_optical_frame",
                          "fr3_link0")
