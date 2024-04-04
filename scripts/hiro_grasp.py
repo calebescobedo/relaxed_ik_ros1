@@ -8,31 +8,38 @@ from std_msgs.msg import Float32MultiArray
 
 class hiro_grasp:
     def __init__(self):
-        print("Right before open call")
-        self.open()
+        # print("Right before open call")
+        self.client = actionlib.SimpleActionClient('/franka_gripper/grasp', franka_gripper.msg.GraspAction)
+        # self.open()
+        self.__width = 0.1
+        self.__inner = 0.1
+        self.__outer = 0.1
+        self.__speed = 0.1
+        self.__force = 10
 
     def __set_open_grasp(self):
         self.__width = 0.1
-        self.__inner = 0.020
-        self.__outer = 0.020
+        self.__inner = 0.1
+        self.__outer = 0.1
         self.__speed = 0.1
         self.__force = 10
 
     def grasp(self):
-        print('create client')
-        client = actionlib.SimpleActionClient('/franka_gripper/grasp', franka_gripper.msg.GraspAction)
-        print('wait for client')
-        # client.wait_for_server()
+        # print('create client')
+        # print('wait for client')
+        # self.client.wait_for_server()
         goal = franka_gripper.msg.GraspGoal()
         goal.width = self.__width
         goal.epsilon.inner = self.__inner
         goal.epsilon.outer = self.__outer
         goal.speed = self.__speed
         goal.force = self.__force
-        print('send goal')
-        client.send_goal(goal)
-        # client.wait_for_result()
-    
+        # print('send goal')
+        # print(goal)
+        self.client.send_goal(goal)
+        # self.client.wait_for_result()
+        # print('goal sent')
+
     def open(self):
         self.__set_open_grasp()
         self.grasp()

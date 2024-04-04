@@ -47,13 +47,13 @@ class GraspLoop:
         }
 
         self.home_pose = home_pose
-        self.load_file = "/home/caleb/robochem_steps/test.txt"
+        self.load_file = "/home/caleb/robochem_steps/b2_b1.txt"
         with open(self.load_file, 'r') as file:
             lines = file.readlines()
             float_arrays = [np.array(eval(line)) for line in lines]
             result_array = np.array(float_arrays)
 
-        print(result_array)
+        # print(result_array)
         self.grasp_list = result_array
         self.__release_flag = [0]
         self.__grasp_flag = [1]
@@ -142,6 +142,8 @@ class GraspLoop:
 
     def __inc_pose_list(self):
         self.cur_list_idx += 1 
+        if self.cur_list_idx >= len(self.grasp_list):
+            exit()
         self.cur_list_idx = self.cur_list_idx % len(self.grasp_list)
         self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
 
@@ -149,25 +151,27 @@ class GraspLoop:
         rospy.sleep(s)
 
     def check_next_state(self, error):
-        error_bound = 0.015
+        error_bound = 0.012
         error_sum = sum([abs(elem) for elem in error])
         ret = False
         
-        print("error sum: ", error_sum)
+        # print("error sum: ", error_sum)
+        # print("error bound", error_bound)
         if error_sum < error_bound:
             if not self.__pose_order_list:
                 self.__inc_pose_list()
                 if self.grasp_list[self.cur_list_idx][0] == self.__grasp_flag:
                     self.hiro_g.set_grasp_width(0.03)
                     self.hiro_g.grasp()
-                    rospy.sleep(1.0)
+                    rospy.sleep(2.0)
                     self.__inc_pose_list()
                 elif self.grasp_list[self.cur_list_idx][0] == self.__release_flag:
                     self.hiro_g.open()
-                    rospy.sleep(1.0)
+                    # print("opening gripper")
+                    rospy.sleep(2.0)
                     self.__inc_pose_list()
                 elif self.grasp_list[self.cur_list_idx][0] == self.__end_flag:
-                    print("QUIT EVERYTHING")
+                    # print("QUIT EVERYTHING")
                     exit()
 
                 if len(self.grasp_list[self.cur_list_idx]) == 2 and self.grasp_list[self.cur_list_idx][0] == self.__wait_flag:
@@ -177,14 +181,14 @@ class GraspLoop:
                 return ret
             if self.__pose_order_list[self.__cur_idx] == "x_d":
                 self.hiro_g.open()
-                rospy.sleep(1.0)
+                rospy.sleep(2.0)
             ret = self.inc_state()
         if not self.__pose_order_list:
             return ret
         elif self.__pose_order_list[self.__cur_idx] == "grasp":
             ret = self.inc_state()
             self.hiro_g.grasp()
-            rospy.sleep(1.0)
+            rospy.sleep(2.0)
         return ret
     
     def __wait_for_new_grasp_pose(self):
@@ -195,7 +199,7 @@ class GraspLoop:
     def inc_state(self):
         dont_loop = True
         if dont_loop and self.cur_list_idx == len(self.__pose_order_list) -1 :
-            print('Quit!!!')
+            # print('Quit!!!')
             exit()
         self.__cur_idx += 1 
         self.__cur_idx = self.__cur_idx % (len(self.__pose_order_list))
@@ -224,14 +228,16 @@ class XboxInput:
         self.robot = Robot(setting_file_path)
         self.grasped = False
         self.final_location = False
-        self.grasp_loop = None
         self.made_loop = False
+        self.grasp_pose = [0,0,0,0,0,0,0]
+        self.x_a = [0,0,0,0,0,0,0]
+        self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.x_a)
 
         self.ee_vel_goals_pub = rospy.Publisher('relaxed_ik/ee_vel_goals', EEVelGoals, queue_size=1)
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
         self.pos_stride = 0.002
         self.rot_stride = 0.0125
-        self.p_t = 0.0025
+        self.p_t = 0.005
         self.p_r = 0.001
         self.rot_error = [0.0, 0.0, 0.0]
 
@@ -243,14 +249,12 @@ class XboxInput:
         self.linear = [0,0,0]
         self.angular = [0,0,0]
         self.joy_data = None
-        self.grasp_pose = [0,0,0,0,0,0,0]
-        self.x_a = [0,0,0,0,0,0,0]
         self.start_grasp = False
         self.prev_fr_euler = [0, 0, 0]
         self.grasp_midpoint = [0,0,0,0,0,0,0]
 
         self.grip_cur = 0.08
-        self.grip_inc = 0.04
+        self.grip_inc = 0.02
         self.grip_max = 0.08
         self.grip_min = 0.01
         self.prev_pres = 0
@@ -284,7 +288,7 @@ class XboxInput:
         rospy.Subscriber("final_grasp", Float32MultiArray, self.subscriber_callback)
         rospy.Subscriber("/franka_state_controller/franka_states", FrankaState, self.fr_state_cb)
         rospy.Subscriber("/estimated_approach_frame", Float32MultiArray, self.l_shaped_callback)
-        rospy.sleep(1.0)
+        # rospy.sleep(1.0)
         rospy.Timer(rospy.Duration(0.005), self.timer_callback)
 
     def joy_cb(self, data):
@@ -305,8 +309,8 @@ class XboxInput:
             self.angular[2] -= self.rot_stride
 
         y_press = data.buttons[3]
-        if y_press:
-            print("Franka Pose: ", self.franka_pose)
+        # if y_press:
+        #     print("Franka Pose: ", self.franka_pose)
 
         # Start is button 7
         start = data.buttons[7]
@@ -342,7 +346,7 @@ class XboxInput:
         if self.grip_cur < self.grip_min: self.grip_cur = self.grip_min
 
     def move_gripper(self):
-        print('In move gripper grip_cur: ', self.grip_cur)
+        # print('In move gripper grip_cur: ', self.grip_cur)
         self.grasp_loop.hiro_g.set_grasp_width(self.grip_cur)
         self.grasp_loop.hiro_g.grasp()
 
@@ -791,6 +795,7 @@ class XboxInput:
         elif self.fr_position[2] < z_min and self.linear[2] < 0: self.linear[2] = 0
 
     def xbox_input(self):
+        # print("IN XBOXINPUT")
         msg = EEVelGoals()
         if not self.og_set:
             self.og_set = True
@@ -800,6 +805,8 @@ class XboxInput:
         if not self.made_loop:
             self.made_loop = True
             self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
+            # print("sleep for 5")
+            # time.sleep(5)
             
         fr_r = R.from_matrix(self.fr_rotation_matrix)
         fr_quat = fr_r.as_quat()

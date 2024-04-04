@@ -222,7 +222,7 @@ class RelaxedIK:
         ik_solution = self.relaxed_ik.hiro_solve_velocity(linear_vels, quat_goal, tolerances, quat_line, cone_params, x_a, x_g, x_history, y_history, z_history)
 
         assert len(ik_solution) == len(self.robot.articulated_joint_names)
-        print(ik_solution)
+        # print(ik_solution)
         self.js_msg.header.stamp = rospy.Time.now()
         self.js_msg.position = ik_solution
         self.angles_pub.publish(self.js_msg)
