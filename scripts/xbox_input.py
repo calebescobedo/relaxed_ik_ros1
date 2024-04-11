@@ -132,6 +132,7 @@ class GraspLoop:
     def grasp(self):
         self.hiro_g.grasp()
 
+
     def get_error_xyz(self, x_ee):
         return self.xyz_diff(x_ee, self.grasp_dict["x_goal"])
     
