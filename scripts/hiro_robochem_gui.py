@@ -1,69 +1,99 @@
 from datetime import datetime, timedelta
 import rospy
+import rospkg
 from tkinter import *
+from xbox_input import XboxInput as RobotController
 import time
-from xbox_input import *
+import os
+import hiro_grasp
+import multiprocessing as mping
+class hiro_gui_display:
+    def __init__(self):
+        mping.set_start_method('forkserver')
+        p_display = mping.Process(name='p_display', target=self.create_display)
+        p_ros = mping.Process(name='p_robo', target=self.init_robo)
+        p_display.start()
+        p_ros.start()
+        p_ros.join()
 
-root = Tk()
+    def init_robo(self):
+        path_to_src = rospkg.RosPack().get_path('relaxed_ik_ros1') + '/relaxed_ik_core'
 
-root.title("RoboChem")
+        #Init and spin ros node
+        flag = rospy.set_param('hiro_robochem/flag', 'list')
+        xController = RobotController(flag=flag)
 
-root.geometry('350x200')
 
-lbl = Label(root, text="Enter number of hours")
-lbl.grid()
+    def create_display(self):
+        #Create Tk window and add buttons/text boxes
+        self.root = Tk()
+        self.root.title("RoboChem")
+        self.root.geometry('350x200')
 
-txt = Entry(root, width=10)
-txt.grid(column=1, row=0)
+        lbl = Label(self.root, text="Enter number of hours")
+        lbl.grid()
 
-lbl = Label(root, text="Enter number of minutes")
-lbl.grid(column=0, row=1)
+        txt = Entry(self.root, width=10)
+        txt.grid(column=1, row=0)
 
-txt2 = Entry(root, width=10)
-txt2.grid(column=1, row=1)
+        lbl = Label(self.root, text="Enter number of minutes")
+        lbl.grid(column=0, row=1)
 
-lbl = Label(root, text="Enter number of seconds")
-lbl.grid(column=0, row=2)
+        txt2 = Entry(self.root, width=10)
+        txt2.grid(column=1, row=1)
 
-txt3 = Entry(root, width=10)
-txt3.grid(column=1, row=2)
+        lbl = Label(self.root, text="Enter number of seconds")
+        lbl.grid(column=0, row=2)
 
-def clicked():
-    hours = txt.get()
-    minutes = txt2.get()
-    seconds = txt3.get()
-    
-    msg = "Hours:" + hours + " Minutes:" + minutes + " Seconds:" + seconds 
+        txt3 = Entry(self.root, width=10)
+        txt3.grid(column=1, row=2)
 
-    lbl = Label(root, text=msg)
-    lbl.grid(column=0, row=3)
-    
-    hours=int(hours)
-    minutes=int(minutes)
-    seconds=int(seconds)
+        btn = Button(self.root, text = "Enter", fg ="coral", command=self.clicked)
+        btn.grid(column=2, row=0)
 
-    t = (hours*3600) + (minutes*60) + seconds
-    display(hours, minutes, seconds, t)
+        btn2 = Button(self.root, text="Execute transfers", command=self.closeGrip)
+        btn2.grid(column=0, row=6)
 
-def display(hours, mins, secs, t):
-    while t:
-        cur_time = timedelta(seconds=t)
-        timer = 'Time until next transfer: ' + str(cur_time)
-        time.sleep(1)
-        t -= 1
-        new_time = Label(root, text=timer)
+        self.root.mainloop() # start loop on window
+
+    def clicked(self):
+        hours = self.txt.get()
+        minutes = self.txt2.get()
+        seconds = self.txt3.get()
+
+        hours=int(hours)
+        minutes=int(minutes)
+        seconds=int(seconds)
+
+        t = (hours*3600) + (minutes*60) + seconds
+        self.display(hours, minutes, seconds, t)
+
+    def display(self, hours, mins, secs, t):
+        while t:
+            cur_time = timedelta(seconds=t)
+            timer = 'Time until next transfer: ' + str(cur_time)
+            new_time = Label(self.root, text=timer)
+            new_time.grid(column=0, row=4)
+            self.root.update()
+            self.root.update_idletasks()
+            time.sleep(1)
+            t -= 1
+        new_time = Label(self.root, text="Executing next transfer,\n please stay clear of the robot")
         new_time.grid(column=0, row=4)
-        root.update_idletasks()
-        root.update()
 
-btn = Button(root, text = "Enter", fg ="coral", command=clicked)
+    def closeGrip(self):
+        print("TYPE", type(self))
+        self.hiro_g = hiro_grasp.hiro_grasp()
+        print("HIRO_G", self.hiro_g)
+        self.grip_inc = self.grip_cur
+        self.grip_cur -= self.grip_inc
+        self.move_gripper()
 
-btn.grid(column=2, row=0)
+if __name__ == '__main__':   
+    rospy.init_node('hiro_robochem')
+    hiro_gui_display() 
 
-root.mainloop()
 
-if __name__ == '__main__':
-    flag = rospy.get_param("/xbox_input/flag")
-    rospy.init_node('xbox_input')
-    xController = XboxInput(flag=flag)
-    rospy.spin()
+
+
+
