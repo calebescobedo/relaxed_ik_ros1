@@ -236,7 +236,7 @@ class XboxInput:
 
         self.ee_vel_goals_pub = rospy.Publisher('relaxed_ik/ee_vel_goals', EEVelGoals, queue_size=1)
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
-        self.pos_stride = 0.003
+        self.pos_stride = 0.002
         self.rot_stride = 0.0125
         self.p_t = 0.02
         self.p_r = 0.0075
@@ -289,9 +289,8 @@ class XboxInput:
         rospy.Subscriber("final_grasp", Float32MultiArray, self.subscriber_callback)
         rospy.Subscriber("/franka_state_controller/franka_states", FrankaState, self.fr_state_cb)
         rospy.Subscriber("/estimated_approach_frame", Float32MultiArray, self.l_shaped_callback)
-        rospy.sleep(1.0)
+        # rospy.sleep(1.0)
         rospy.Timer(rospy.Duration(0.001), self.timer_callback)
-        rospy.spin()
 
     def joy_cb(self, data):
         self.joy_data = data
@@ -349,7 +348,7 @@ class XboxInput:
         if self.grip_cur < self.grip_min: self.grip_cur = self.grip_min
 
     def move_gripper(self):
-        print('In move gripper grip_cur: ', self.grip_cur)
+        # print('In move gripper grip_cur: ', self.grip_cur)
         self.grasp_loop.hiro_g.set_grasp_width(self.grip_cur)
         self.grasp_loop.hiro_g.grasp()
 
@@ -798,17 +797,13 @@ class XboxInput:
         elif self.fr_position[2] < z_min and self.linear[2] < 0: self.linear[2] = 0
 
     def xbox_input(self):
-        # print('xbox loop time: ', time.time())
         msg = EEVelGoals()
         if not self.og_set:
-            print('Set OG goal')
             self.og_set = True
             self.og_trans = copy.deepcopy(self.x_a[:3])
             self.og_quat = copy.deepcopy(self.x_a[3:])
 
         if not self.made_loop:
-            # print('Xbox flag:', self.flag)
-            print('Loop made')
             self.made_loop = True
             self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
             
@@ -840,7 +835,7 @@ class XboxInput:
 
             msg.ee_vels.append(twist)
             msg.tolerances.append(tolerance)
-        print('Msg', msg)
+
         self.ee_vel_goals_pub.publish(msg)
         self.on_release()
 
@@ -891,4 +886,4 @@ if __name__ == '__main__':
     flag = rospy.get_param("/xbox_input/flag")
     rospy.init_node('xbox_input')
     xController = XboxInput(flag=flag)
-    
+    rospy.spin()

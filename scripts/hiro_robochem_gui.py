@@ -30,29 +30,29 @@ class hiro_gui_display:
         self.root.title("RoboChem")
         self.root.geometry('350x200')
 
-        lbl = Label(self.root, text="Enter number of hours")
-        lbl.grid()
+        self.lbl = Label(self.root, text="Enter number of hours")
+        self.lbl.grid()
 
-        txt = Entry(self.root, width=10)
-        txt.grid(column=1, row=0)
+        self.txt = Entry(self.root, width=10)
+        self.txt.grid(column=1, row=0)
 
-        lbl = Label(self.root, text="Enter number of minutes")
-        lbl.grid(column=0, row=1)
+        self.lbl = Label(self.root, text="Enter number of minutes")
+        self.lbl.grid(column=0, row=1)
 
-        txt2 = Entry(self.root, width=10)
-        txt2.grid(column=1, row=1)
+        self.txt2 = Entry(self.root, width=10)
+        self.txt2.grid(column=1, row=1)
 
-        lbl = Label(self.root, text="Enter number of seconds")
-        lbl.grid(column=0, row=2)
+        self.lbl = Label(self.root, text="Enter number of seconds")
+        self.lbl.grid(column=0, row=2)
 
-        txt3 = Entry(self.root, width=10)
-        txt3.grid(column=1, row=2)
+        self.txt3 = Entry(self.root, width=10)
+        self.txt3.grid(column=1, row=2)
 
-        btn = Button(self.root, text = "Enter", fg ="coral", command=self.clicked)
-        btn.grid(column=2, row=0)
+        self.btn = Button(self.root, text = "Enter", fg ="coral", command=self.clicked)
+        self.btn.grid(column=2, row=0)
 
-        btn2 = Button(self.root, text="Execute transfers", command=self.closeGrip)
-        btn2.grid(column=0, row=6)
+        self.btn2 = Button(self.root, text="Execute transfers", command=self.closeGrip)
+        self.btn2.grid(column=0, row=6)
 
         self.root.mainloop() # start loop on window
 
@@ -85,8 +85,8 @@ class hiro_gui_display:
         print("TYPE", type(self))
         self.hiro_g = hiro_grasp.hiro_grasp()
         print("HIRO_G", self.hiro_g)
-        self.grip_inc = self.grip_cur
-        self.grip_cur -= self.grip_inc
+        RobotController.grip_inc = RobotController.grip_cur
+        self.hiro_g.grip_cur -= self.hiro_g.grip_inc
         self.move_gripper()
 
 if __name__ == '__main__':   
