@@ -4,8 +4,8 @@
     <param name="setting_file_path" value="$(arg setting_file_path)" />
 
     <node pkg="relaxed_ik_ros1" type="relaxed_ik_rust.py" name="relaxed_ik_rust" output="screen" >
-        <param name="use_visualization" value="True" />
+        <param name="use_visualization" value="False" />
     </node>
 
-    <node pkg="relaxed_ik_ros1" type="rviz_viewer.py" name="rviz_viewer" />
+    <!-- <node pkg="relaxed_ik_ros1" type="rviz_viewer.py" name="rviz_viewer" /> -->
 </launch>

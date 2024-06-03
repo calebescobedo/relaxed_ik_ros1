@@ -32,29 +32,26 @@ path_to_src = rospkg.RosPack().get_path('relaxed_ik_ros1') + '/relaxed_ik_core'
 class GraspLoop:
     def __init__(self, flag, grasp_pose, grasp_apprach, 
                  home_pose=[0.30871, 0.000905, 0.48742, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
-                 drop_pose = [0.23127, -0.5581, 0.31198, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
-                 cone_radius=0.25, cone_height=0.25,):
+                 drop_pose = [0.23127, -0.5581, 0.31198, 0.9994651, -0.00187451, 0.0307489, -0.01097748]):
         self.grasp_dict = {
             "x_g" : grasp_pose,
             "x_a" : grasp_apprach,
             "x_h" : home_pose,
             "x_d" : drop_pose,
             "x_c" : None,
-            "c_r" : cone_radius,
-            "c_h" : cone_height,
             "x_goal": None,
             "grasp": False
         }
 
         self.home_pose = home_pose
-        self.load_file = "/home/caleb/robochem_steps/b2_b1.txt"
+        self.load_file = "/home/caleb/robochem_steps/test2.txt"
         with open(self.load_file, 'r') as file:
             lines = file.readlines()
             float_arrays = [np.array(eval(line)) for line in lines]
             result_array = np.array(float_arrays)
 
         # print(result_array)
-        self.grasp_list = result_array
+        self.grasp_dict = result_array
         self.__release_flag = [0]
         self.__grasp_flag = [1]
         self.__wait_flag = [2]
@@ -116,9 +113,6 @@ class GraspLoop:
             self.grasp_dict["x_goal"] = self.grasp_dict["x_a"]
             return ["x_a", "x_g", "grasp", "x_h", "x_d", "x_h"]
         
-        elif self.flag == "cone":
-            return ["x_c", "x_g", "grasp", "x_h", "x_d", "x_h"]
-        
         elif self.flag == "list":
             self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
             return None
@@ -135,11 +129,6 @@ class GraspLoop:
 
     def get_error_xyz(self, x_ee):
         return self.xyz_diff(x_ee, self.grasp_dict["x_goal"])
-    
-    def check_cone_done(self):
-        if self.flag == "cone" and self.__cur_idx > 2:
-            return True
-        return False
 
     def __inc_pose_list(self):
         self.cur_list_idx += 1 
@@ -274,15 +263,10 @@ class XboxInput:
         self.og_set = False
         self.in_collision = False
         self.og_x_a = [1, 1, 1]
-        self.cone_radius = 0.25
-        self.cone_height = 0.25
         self.msg_obj_to_line = 0.0
-        self.msg_cone_start = 0.0
-        self.nearest_cone_points = [None, None]
         self.x_c = [0,0,0,0,0,0,0]
         self.last_grasp_time = time.time()
         self.save_file = "/home/caleb/robochem_steps/test.txt"
-        self.cone_pub = rospy.Publisher('cone_viz', MarkerArray, queue_size=1)
 
         rospy.Subscriber("/mid_grasp_point", Float32MultiArray, self.grasp_midpoint_callback)
         rospy.Subscriber("joy", Joy, self.joy_cb)
@@ -312,27 +296,27 @@ class XboxInput:
             self.angular[2] -= self.rot_stride
 
         y_press = data.buttons[3]
-        # if y_press:
-        #     print("Franka Pose: ", self.franka_pose)
+        if y_press:
+            print("Franka Pose: ", self.franka_pose)
 
         # Start is button 7
-        # start = data.buttons[7]
-        # back = data.buttons[6]
+        start = data.buttons[7]
+        back = data.buttons[6]
 
-        # if start:
-        #     self.save = True
-        #     self.start_time = time.perf_counter()
-        # if back:
-        #     f = open("/home/caleb/catkin_ws/src/relaxed_ik_ros1/scripts/xyz_data.csv", "w")
-        #     f.truncate()
-        #     f.close()    
-        #     self.save = False
-        #     self.end_time = time.perf_counter()
-        #     self.total_time = self.end_time - self.start_time
-        #     self.data_array = np.append(self.data_array, self.total_time)
-        #     print('\n\n SAVING TO CSV \n\n', f'\n\n {self.total_time:0.4f} \n\n')
-        #     np.savetxt("/home/caleb/catkin_ws/src/relaxed_ik_ros1/scripts/xyz_data.csv", self.data_array, delimiter=",")
-        #     exit()
+        if start:
+            self.save = True
+            self.start_time = time.perf_counter()
+        if back:
+            f = open("/home/caleb/catkin_ws/src/relaxed_ik_ros1/scripts/xyz_data.csv", "w")
+            f.truncate()
+            f.close()    
+            self.save = False
+            self.end_time = time.perf_counter()
+            self.total_time = self.end_time - self.start_time
+            self.data_array = np.append(self.grasp_list, self.total_time)
+            print('\n\n SAVING TO CSV \n\n', f'\n\n {self.total_time:0.4f} \n\n')
+            np.savetxt("/home/caleb/catkin_ws/src/relaxed_ik_ros1/scripts/xyz_data.csv", self.data_array, delimiter=",")
+            exit()
 
         a = data.buttons[0]
         b = data.buttons[1]
@@ -429,128 +413,6 @@ class XboxInput:
         for x in range(3):
                 self.prev_fr_euler[x] = fr_euler[x]
         return q_list[-1], fr_euler
-        
-    def pub_cylinder(self, xyz, quat):
-
-        marker_pub = rospy.Publisher('/cylinder_grasp', Marker, queue_size=1)
-        marker = Marker()
-        marker.header.frame_id = "fr3_link0"
-        marker.ns = ""
-        marker.header.stamp = rospy.Time.now()
-        marker.id = 0
-        marker.type = marker.CYLINDER
-        marker.action = marker.ADD
-        marker.color.a = 0.5
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 1.0
-        marker.scale.x = self.cone_radius
-        marker.scale.y = self.cone_radius
-        marker.scale.z = self.cone_height
-        marker.pose.position.x = self.grasp_midpoint[0]
-        marker.pose.position.y = self.grasp_midpoint[1]
-        marker.pose.position.z = self.grasp_midpoint[2]
-        marker.pose.orientation.x = quat[0]
-        marker.pose.orientation.y = quat[1]
-        marker.pose.orientation.z = quat[2]
-        marker.pose.orientation.w = quat[3]
-        marker_pub.publish(marker)
-
-    def pub_closest_point(self, xyz):
-
-        marker_pub = rospy.Publisher('/closest_point', Marker, queue_size=1)
-        marker = Marker()
-        marker.header.frame_id = "fr3_link0"
-        marker.ns = ""
-        marker.header.stamp = rospy.Time.now()
-        marker.id = 1000
-        marker.type = marker.SPHERE
-        marker.action = marker.ADD
-        marker.color.a = 1.0
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 1.0
-        marker.scale.x = 0.05
-        marker.scale.y = 0.05
-        marker.scale.z = 0.05
-        marker.pose.position.x = xyz[0]
-        marker.pose.position.y = xyz[1]
-        marker.pose.position.z = xyz[2]
-        marker.pose.orientation.x = 0.0
-        marker.pose.orientation.y = 0.0
-        marker.pose.orientation.z = 0.0
-        marker.pose.orientation.w = 1.0
-        marker_pub.publish(marker)
-
-
-    def pub_cone_as_cylinders(self, x_a, x_g, quat):
-        top_xyz = x_a[:3]
-        bottom_xyz = x_g[:3]
-        marker_arr = MarkerArray()
-        cone_split = 100
-        lower_cone_size = 0.01
-        colors_ = cm.rainbow(np.linspace(0, 1, cone_split))
-        x_inter = np.linspace(bottom_xyz[0], top_xyz[0], cone_split)
-        y_inter = np.linspace(bottom_xyz[1], top_xyz[1], cone_split)
-        z_inter = np.linspace(bottom_xyz[2], top_xyz[2], cone_split)
-        z_step = abs(z_inter[1] - z_inter[2])
-        width = np.linspace(lower_cone_size, self.cone_radius*2, cone_split )
-
-        for idx, x in enumerate(width):
-            m = Marker()
-            m.ns = ""
-            m.header.frame_id = "fr3_link0"
-            m.id = idx
-            m.header.stamp = rospy.Time.now()
-            m.type = Marker.CYLINDER
-            m.action = Marker.ADD
-            m.pose.orientation.x = quat[0]
-            m.pose.orientation.y = quat[1]
-            m.pose.orientation.z = quat[2]
-            m.pose.orientation.w = quat[3]
-            m.scale = Vector3(x, x, z_step)
-            color = colors_[idx]
-            m.color = ColorRGBA(color[0], color[1], color[2], 0.5)
-            m.pose.position.x = x_inter[idx]
-            m.pose.position.y = y_inter[idx]
-            m.pose.position.z = z_inter[idx]   
-            marker_arr.markers.append(m)  
-        self.cone_pub.publish(marker_arr)
-
-    def make_fcl_cone(self):
-        cone = fcl.Cone(self.cone_radius, self.cone_height)
-        return cone
-
-
-    def make_fcl_cylinder(self):
-        cylinder = fcl.Cylinder(self.cone_radius, self.cone_height)
-        return cylinder
-    
-    def make_ee_sphere(self):
-        rad = 0.01
-        ee = fcl.Sphere(rad)
-        return ee
-    
-    def lineseg_dist(self, p, a, b):
-        p = np.array(p)
-        a = np.array(a)
-        b = np.array(b)
-        d = np.divide(b - a, np.linalg.norm(b - a))
-
-        s = np.dot(a - p, d)
-        t = np.dot(p - b, d)
-
-        h = np.maximum.reduce([s, t, 0])
-
-        c = np.cross(p - a, d)
-
-        return abs(np.hypot(h, np.linalg.norm(c)))
-    
-    def get_norm(self, a, b):
-        a_np = np.array(a)
-        b_np = np.array(b)
-
-        return np.linalg.norm(b_np - a_np)
     
     def get_unit_line(self, a, b):
         a_np = np.asarray(a)
@@ -559,37 +421,6 @@ class XboxInput:
         line = b_np - a_np
         line = normalize([line], axis=1, norm='l1')
         return line[0]
-    
-    
-    def find_ee_height(self, gripper_loc, x_a, grasp_loc):
-        theta = np.rad2deg(np.arctan(self.cone_radius / self.cone_height))
-        radius = self.lineseg_dist(gripper_loc, grasp_loc, x_a)
-
-        hypot = self.get_norm(gripper_loc, grasp_loc)
-        temp_theta = np.arcsin(radius/hypot)
-        temp_theta_deg = np.rad2deg(temp_theta)
-        new_height = np.cos(temp_theta) * hypot
-        cone_radius = np.tan(theta) * new_height
-
-        self.msg_obj_to_line = radius
-        self.msg_cone_start = 1.0
-
-        return new_height
-
-    def check_collide(self, ee, ee_trans, ee_quat, cone, cone_trans, cone_quat):
-        tf_ee = fcl.Transform(ee_quat, ee_trans)
-        tf_cone = fcl.Transform(cone_quat, cone_trans)
-        obj_ee = fcl.CollisionObject(ee, tf_ee)
-        obj_cone = fcl.CollisionObject(cone, tf_cone)
-        request = fcl.DistanceRequest(enable_nearest_points=True, enable_signed_distance=True)
-        result = fcl.DistanceResult()
-        ret = fcl.distance(obj_ee, obj_cone, request, result)
-        self.nearest_cone_points = result.nearest_points
-        if ret > 0 and not self.grasp_loop.already_collided:
-            return False
-        else:
-            self.grasp_loop.already_collided = True
-            return True
 
     def wait_for_new_grasp(self):
         self.prev_grasp = self.grasp_pose[0]
@@ -605,17 +436,21 @@ class XboxInput:
         return False
 
     def move_through_list(self):
+        print(self.grasp_loop.grasp_dict)
+        print(self.grasp_list)
         if self.fr_state:
             if not self.made_loop:
                 self.made_loop = True
                 self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
+                print("Made GraspLoop in list")
 
             line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
             hiro_msg = Float64MultiArray()
             self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
             
             hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
-            # print(len(hiro_msg.data))
+            self.clamp_linear_position()
+
             hiro_msg.data[3] = self.grasp_loop.grasp_dict["x_goal"][6]
             hiro_msg.data[4] = self.grasp_loop.grasp_dict["x_goal"][3]
             hiro_msg.data[5] = self.grasp_loop.grasp_dict["x_goal"][4]
@@ -624,10 +459,7 @@ class XboxInput:
             for x in line:
                 hiro_msg.data.append(x)
                 
-            hiro_msg.data.append(self.cone_radius)
-            hiro_msg.data.append(self.cone_height)
             hiro_msg.data.append(self.msg_obj_to_line)
-            hiro_msg.data.append(self.msg_cone_start)
             hiro_msg.data.append(self.og_x_a[0])
             hiro_msg.data.append(self.og_x_a[1])
             hiro_msg.data.append(self.og_x_a[2])
@@ -653,10 +485,7 @@ class XboxInput:
             hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
             for x in line:
                 hiro_msg.data.append(x)
-            hiro_msg.data.append(self.cone_radius)
-            hiro_msg.data.append(self.cone_height)
             hiro_msg.data.append(self.msg_obj_to_line)
-            hiro_msg.data.append(self.msg_cone_start)
             hiro_msg.data.append(self.og_x_a[0])
             hiro_msg.data.append(self.og_x_a[1])
             hiro_msg.data.append(self.og_x_a[2])
@@ -681,10 +510,7 @@ class XboxInput:
             hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
             for x in line:
                 hiro_msg.data.append(x)
-            hiro_msg.data.append(self.cone_radius)
-            hiro_msg.data.append(self.cone_height)
             hiro_msg.data.append(self.msg_obj_to_line)
-            hiro_msg.data.append(self.msg_cone_start)
             hiro_msg.data.append(self.og_x_a[0])
             hiro_msg.data.append(self.og_x_a[1])
             hiro_msg.data.append(self.og_x_a[2])
@@ -698,86 +524,7 @@ class XboxInput:
             if self.grasp_loop.check_next_state(self.error_state):
                 self.wait_for_new_grasp()
 
-    def cone(self):
-        if self.start_grasp and self.fr_state: 
-            if self.grasped:
-                self.x_a = self.grasp_pose
-            
-            if not self.made_loop:
-                self.made_loop = True
-                self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
-
-            grasp_r = R.from_quat(self.x_a[3:])
-            grasp_euler = grasp_r.as_euler('xyz', degrees=False)
-
-            fr_r = R.from_matrix(self.fr_rotation_matrix)
-            fr_quat = fr_r.as_quat()
-            fr_euler = fr_r.as_euler('xyz', degrees=False)
-            fr_euler, fr_quat = self.calc_rotation_sign(fr_euler, grasp_euler)
-
-            quat_error, fr_euler = self.quaterion_error(fr_quat=fr_quat, grasp_quat=grasp_r.as_quat(), fr_euler=fr_euler, grasp_euler=grasp_euler)
-
-            self.rot_error = self._xyz_diff(fr_euler, quat_error)
-            self.rot_error = np.array(self.rot_error) * self.p_r
-            fcl_ee = self.make_ee_sphere()
-            fcl_cone = self.make_fcl_cone()
-
-            if not self.og_set:
-                self.og_set = True
-                self.og_trans = self.grasp_midpoint[:3]
-                self.og_quat = self.grasp_midpoint[3:]
-            
-            if self.start_grasp:
-                self.pub_cone_as_cylinders(self.og_x_a, self.grasp_pose, self.grasp_pose[3:])
-            self.in_collision = self.check_collide(fcl_ee, self.fr_position, [fr_quat[3], fr_quat[0], fr_quat[1], fr_quat[2]]
-                            ,fcl_cone, self.grasp_midpoint[:3], [self.og_quat[3], self.og_quat[0], self.og_quat[1], self.og_quat[2]])
-        
-            if self.in_collision:
-                self.find_ee_height(self.fr_position, self.og_x_a[:3], self.grasp_pose[:3])
-            else:
-                self.x_c = self.nearest_cone_points[1]
-                self.x_c = np.concatenate((self.x_c, self.og_x_a[3:]))
-                self.grasp_loop.set_x_c(self.x_c)
-                self.grasp_loop.update_grasp_goal()
-
-            self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
-            self.pub_closest_point(self.x_c)
-            
-
-            line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
-
-            hiro_msg = Float64MultiArray()
-            hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
-            self.grasp_loop.add_to_xyz_history(self.fr_position)
-            x_hist, y_hist, z_hist = self.grasp_loop.get_franka_xyz_history()
-            for x in line:
-                hiro_msg.data.append(x)
-            hiro_msg.data.append(self.cone_radius)
-            hiro_msg.data.append(self.cone_height)
-            hiro_msg.data.append(self.msg_obj_to_line)
-            if self.grasp_loop.check_cone_done():
-                hiro_msg.data.append(0.0)
-            else:
-                hiro_msg.data.append(self.msg_cone_start)
-            hiro_msg.data.append(self.og_x_a[0])
-            hiro_msg.data.append(self.og_x_a[1])
-            hiro_msg.data.append(self.og_x_a[2])
-            hiro_msg.data.append(self.grasp_midpoint[0])
-            hiro_msg.data.append(self.grasp_midpoint[1])
-            hiro_msg.data.append(self.grasp_midpoint[2])
-            for x in x_hist:
-                hiro_msg.data.append(x)
-            for y in y_hist:
-                hiro_msg.data.append(y)
-            for z in z_hist:
-                hiro_msg.data.append(z)
-
-
-            self.hiro_ee_vel_goals_pub.publish(hiro_msg)
-            self.on_release()
-            if self.grasp_loop.check_next_state(self.error_state):
-                self.wait_for_new_grasp()
-    def clamp_linear_velocity(self):
+    def clamp_linear_position(self):
         z_max = 0.7
         z_min = 0.02
         y_max = 0.7
@@ -820,8 +567,9 @@ class XboxInput:
         self.franka_pose = []
         self.franka_pose.extend(self.fr_position)
         self.franka_pose.extend(fr_quat)
+        print(self.franka_pose)
 
-        self.clamp_linear_velocity()
+        self.clamp_linear_position()
         for i in range(self.robot.num_chain):
             twist = Twist()
             tolerance = Twist()
@@ -840,7 +588,7 @@ class XboxInput:
 
             msg.ee_vels.append(twist)
             msg.tolerances.append(tolerance)
-        print('Msg', msg)
+        # print('Msg', msg)
         self.ee_vel_goals_pub.publish(msg)
         self.on_release()
 
@@ -851,8 +599,6 @@ class XboxInput:
             self.xbox_input()
         elif self.flag == "l-shaped":
             self.l_shaped_movement()
-        elif self.flag == "cone":
-            self.cone()
         elif self.flag == "list":
             self.move_through_list()
 
