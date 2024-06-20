@@ -1,0 +1,271 @@
+xbox_velocity_control.launch or xbox_impedance_control.launch:
+	default flag arg: xbox
+	include file: franka_example_controllers/launch/hiro_joint_(velocity or impedance)_example_controller.launch, pass all args
+	include file: relaxed_ik_ros1/launch/demo.launch, pass all args
+	create node pkg: "relaxed_ik_ros1 xbox_input.py", output to screen
+	create node pkg: "joy joy_node", output to screen, autorepeat at 30 hZ
+To run .launch: relaxed_ik_ros1 xbox_(velocity or impedance)_control.launch 
+
+In xbox_input.py:
+headers: 
+	(global) path_to_src -> relaxed_ik_ros1/relaxed_ik_core
+in main:
+	flag -> /xbox_input/flag/ parameter (set in launch file)
+	init /xbox_input/ node
+	xController -> XboxInput instance (flag -> (flag or /xbox_input/flag))
+	
+for xbox flag: 
+	init XboxInput(flag=xbox)->xbox_input method (self)
+		msg -> EEVelGoals instance ()
+		if not og_set:
+			print 'Set OG Goal'
+			og_set ->  True
+			og_trans -> copy->deepcopy method(x_a->[:3])
+			og_quat -> copy->deepcopy method(x_a->[3:])
+			
+		if not made_loop: 
+			print 'Loop made'
+			made_loop -> True 
+			grasp_loop -> GraspLoop instance (flag->xbox, grasp_pose->grasp_pose, grasp_approach->og_x_a)
+			
+		fr_r -> R->from_matrix method (fr_rotation_matrix)
+		fr_quat -> fr_r->as_quat method ()
+		fr_e -> fr_r->as_euler method (seq->'xyz', degrees->False)
+		fr_r -> R->from_euler method (seq-> 'xyz', angles->fr_e, degrees->False)
+		
+		franka_pose -> []
+		franka_pose->extend method (fr_position)
+		franka_pose->extend method (fr_quat)
+		
+		clamp_linear_position method ()
+		
+		for i in range(robot->num_chain):
+			twist -> Twist () instance
+			tolerance -> Twist () instance
+			twist->linear->x -> linear->[0]
+			twist->linear->y -> linear->[1]
+			twist->linear->z -> linear->[2]
+			twist->angular->x -> angular->[0]
+			twist->angular->y -> angular->[1]
+			twist->angular->z -> angular->[2]
+			tolerance->linear->x -> 0.0
+			tolerance->linear->y -> 0.0
+			tolerance->linear->z -> 0.0
+			tolerance->angular->x -> 0.0
+			tolerance->angular->y -> 0.0
+			tolerance->angular->z -> 0.0
+			
+			msg->ee_vels->append method (twist)
+			msg->tolerances->append method (tolerance)
+		ee_vel_goals_pub->publish method (msg)
+		on_release method ()
+	
+for list flag:
+	init XboxInput(flag->list)->move_through_list method (self)
+		if fr_state:
+			if not made_loop:
+				made_loop -> True
+				grasp_loop -> GraspLoop instance(flag->list, grasp_pose->grasp_pose, grasp_approach->og_x_a)
+				print 'Made GraspLoop in list'
+				
+			line -> get_unit_line method (grasp_pose->[:3], og_x_a->[:3])
+			hiro_msg -> Float64MultiArray instance ()
+			error_state -> grasp_loop->get_curr_error method (fr_position)
+			hiro_msg->data -> get_hiro_error_msg method (grasp_loop->grasp_dict["x_goal"]->[3:])
+			for x in line: hiro_msg->data->append method (x)
+			hiro_msg->data->append(msg_obj_to_line)
+			hiro_msg->data->append(og_x_a->[0])
+			hiro_msg->data->append(og_x_a->[1])
+			hiro_msg->data->append(og_x_a->[2])
+			hiro_msg->data->append(grasp_pose->[0])
+			hiro_msg->data->append(grasp_pose->[1])
+			hiro_msg->data->append(grasp_pose->[2])
+			
+			hiro_ee_vel_goals_pub->publish method (hiro_msg)
+			on_release()
+			
+			if grasp_loop->check_next_state method (error_state): wait_for_new_grasp()
+			
+
+XboxInput class (Assume all instantiation calls self unless otherwise specified or var is referenced):
+	init XboxInput class (self, flag): 
+		flag -> flag
+		save -> False
+		data_array -> np.array([[]])
+		start_time -> 0.0
+		end_time -> 0.0
+		total_time -> 0.0
+		
+		default_setting_file_path -> path_to_src + '/configs/settings.yaml/'
+		
+		setting_file_path -> demo.launch: "setting_file_path"
+		if setting_file_path -> '':
+			setting_file_path -> default_setting_file_path
+		
+		robot -> Robot instance (param = setting_file_path)
+		grasped -> False
+		final_location -> False
+		made_loop -> False 
+		grasp_pose -> [0, 0, 0, 0, 0, 0, 0]
+		x_a -> [0, 0, 0, 0, 0, 0, 0]
+		grasp_loop -> GraspLoop instance (XboxInput flag, XboxInput grasp_pose, XboxInput x_a) [see __]
+		
+		ee_vel_goals_pub -> rospy Publisher ('relaxed_ik/ee_vel_goals', type -> EEVelGoals)
+		hiro_ee_vel_goals_pub -> rospy Publisher ('relaxed_ik/hiro_ee_vel_goals', type -> Float64MultiArray)
+		pos_stride -> 0.005
+		rot_stride -> 0.0125
+		p_t -> 0.02
+		p_r -> 0.005
+		rot_error -> [0.0, 0.0, 0.0]
+		
+		z_offset, y_offset, x_offset -> 0.0, 0.0, 0.0
+		seq -> 1
+		
+		linear -> [0, 0, 0]
+		angular -> [0, 0, 0]
+		joy_data -> None
+		start_grasp -> None
+		prev_fr_euler -> [0, 0, 0]
+		grasp_midpoint -> [0, 0, 0, 0, 0, 0, 0]
+		
+		grip_cur -> 0.08
+		grip_inc -> 0.02
+		grip_max -> 0.08
+		grip_min -> 0.01
+		prev_pres -> 0
+		
+		fr_position -> [0.0, 0.0, 0.0]
+		fr_rotation_matrix -> [[0.0, 0.0, 0.0],
+					[0.0, 0.0, 0.0],
+					[0.0, 0.0, 0.0]]
+		fr_state -> False
+		error_state -> [0.0, 0.0, 0.0]
+		cur_list_idx -> 0
+		
+		fr_is_neg -> False
+		fr_set -> False
+		got_prev_sign -> False
+		og_set -> False
+		in_collision -> False
+		og_x_a -> [1, 1, 1]
+		cone_radius -> 0.25 #cone flag, depr
+		cone_height -> 0.25 #cone flag, depr
+		msg_obj_to_line -> 0.0
+		msg_cone_start -> 0.0 #cone flag, depr
+		nearest_cone_points -> [None, None] #cone flag, depr
+		x_c -> [0,0,0,0,0,0,0]
+		last_grasp_time -> time() method
+		save_file -> '~/robochem_steps/$(test file).txt"
+		cone_pub -> rospy Publisher ('cone_viz', type -> MarkerArray)
+		
+		rospy Subscriber instance ('/mid_grasp_point', type -> Float32MultiArray, callback -> XboxInput grasp_midpoint_callback)
+		rospy Subscriber instance ('joy', type -> Joy, XboxInput joy_cb)
+		rospy Subscriber instance ('final_grasp', Float32MultiArray, XboxInput subscriber_callback)
+		rospy Subscriber instance ('/franka_state_controller/franka_states', type -> FrankaState, callback -> XboxInput fr_state_cb)
+		rospy Subscriber instance ('/estimated_approach_frame', type -> Float32MultiArray, callback -> XboxInput l_shaped_callback)
+		rospy sleep method (seconds -> 1.0)
+		rospy Timer instance (period -> rospy Duration instance (seconds -> 0.01), callback -> XboxInput timer_callback)
+		rospy spin method() #Blocks current thread until ROS is shutdown
+	
+	init joy_cb method (self, data):
+		joy_data -> data
+		if absolute value (joy_data->axes->[1, 0]) > 0.1): linear->[n] -= pos_stride * (joy_data->axes->[1, 0]) for n -> 0, 1
+		if absolute value (joy_data->axes->[4]) > 0.1: linear->[2] += pos_stride * (joy_data->axes->[4]) 
+		if absolute value (joy_data->axes->[6]) > 0.1: angular->[0] += rot_stride * (joy_data->axes->[6])
+        	if absolute value (joy_data->axes->[7]) > 0.1: angular->[1] += rot_stride * (joy_data->axes->[7])
+            	if absolute value (joy_data->buttons->[4]) > 0.1: angular->[2] += rot_stride
+            	if absolute value (joy_data->buttons->[5]) > 0.1: angular->[2] -= rot_stride
+            		
+            	y -> data->buttons->[3]
+            	if y: print "Franka Pose: franka_pose \n, Grasp List: grasp_loop->grasp_list \n, Grasp Dict: grasp_loop->grasp_dict"
+            	
+            	a -> data->buttons->[0]
+            	b -> data->buttons->[1]
+            	
+            	if a: grip_cur += grip_inc
+            	elif b: grip_cur -= grip_inc
+            	
+            	if a or b: pass # add move_gripper() method functionality
+            	if grip_cur > grip_max: grip_cur -> grip_max
+            	if grip_cur < grip_min: grip_cur -> grip_min
+            	
+	init move_gripper method (self):
+		GraspLoop set_grasp_width method (self->hiro_g, XboxInput->grip_cur)
+		GraspLoop grasp method (self->hiro_g)
+		
+	init on_release method (self):
+		linear -> [0, 0, 0]
+		angular -> [0, 0, 0]
+	
+	init _xyz_diff method (self, start_pose, end_pose):
+		difference -> [0.0, 0.0, 0.0]
+		difference->[n] -> end_pose[n] - start_pose->[n] for n in [0, 1, 2]
+		
+		return difference
+	
+	init calc_error method (self):
+		twist = Twist() instance
+		
+		twist->linear->x -> error_state->[0] * p_t
+		twist->linear->y -> error_state->[1] * p_t
+		twist->linear->z -> error_state->[2] * p_t
+		twist->angular->x -> rot_error[0] * p_r
+		twist->angular->y -> rot_error[1] * p_r
+		twist->angular->z -> rot_error[2] * p_r
+		
+		return twist
+	
+	init get_hiro_error_msg method (self, grasp_quat):
+		ret = []
+		for x in error_state: 
+			ret.append(x * p_t)
+		ret->append(grasp_quat[3])
+		ret->append(grasp_quat[0])
+		ret->append(grasp_quat[1])
+		ret->append(grasp_quat[2])
+		return ret
+	
+	init calc_rotation_sign method (self, gr, fr):
+		fr_rot -> (scipy->spatial->transform->Rotation as R)->from_euler method(seq->xyz, angles->fr_euler, degrees->False)
+		fr_quat -> fr_rot->as_quat method ()
+		fr_euler -> fr_rot->as_euler method (seq->xyz, degrees->False)
+		
+		return fr_euler, fr_quat
+		
+	init quaterion_error method (self, fr_quat, grasp_quat, fr_euler, grasp_euler):
+		q1 -> Quaternion instance (fr_quat[3], fr_quat[0], fr_quat[1], fr_quat[2])
+		q2 -> Quaternion instance (grasp_quat[3], grasp_quat[0], grasp_quat[1], grasp_quat[2])
+		
+		q_list -> []
+		for q in Quaternion->intermediates method (q1, q2, q, include_endpoints=True):
+			rot -> R->from_quat method (quat->[q->unit->x, q->unit->y, q->unit->z, q->unit->w])
+			euler -> rot->as_euler method (seq->'xyz', degrees->False)
+			q_list->append
+			
+		if got_prev_sign: got_prev_sign -> True
+		else: 
+			for x in range(3):
+				if absolute value (grasp_euler[x] - fr_euler[x]) > absolute value (grasp_euler[x] + fr_euler[x])): fr_euler[x] -> -fr_euler[x]
+		for x in range(3): prev_fr_euler[x] -> fr_euler[x]
+		
+		return q_list[-1], fr_euler
+		
+	init pub_cylinder method (self, xyz, quat): #depr, cone flag needs to be factored out of code
+		marker_pub -> rospy->Publisher instance (topic->'/cylinder_grasp', type->Marker)
+		marker->header->frame_id -> 'fr3_link_0'
+		marker->ns -> ''
+		marker->header->stamp -> rospy->Time->now method ()
+		marker->id -> 0
+		marker->type -> marker->CYLINDER
+		marker->action -> marker->ADD
+		marker->color->a, marker->color->r, marker->color->g, marker->color->b -> 0.5, 0.0, 1.0, 1.0
+		marker->scale->x, marker->scale->y, marker->scale->z -> cone_radius, cone_radius, cone_height
+		marker->pose->position->x, marker->pose->position->y, marker->pose->position->z -> grasp_midpoint->[0], grasp_midpoint->[1], grasp_midpoint->[2]
+		marker->pose->orientation->x, marker->pose->orientation->y, marker->pose->orientation->z, marker->pose->orientation->w, -> quat->[0], quat->[1], quat->[2], quat->[3]
+		marker_pub->publish method (marker)
+		
+	 
+            	
+       
+
+		

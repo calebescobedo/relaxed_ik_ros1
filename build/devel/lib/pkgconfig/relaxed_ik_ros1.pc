@@ -1,0 +1,8 @@
+prefix=/home/caleb/catkin_ws/src/relaxed_ik_ros1/build/devel
+
+Name: relaxed_ik_ros1
+Description: Description of relaxed_ik_ros1
+Version: 0.1.0
+Cflags: -I/home/caleb/catkin_ws/src/relaxed_ik_ros1/build/devel/include
+Libs: -L${prefix}/lib 
+Requires: 

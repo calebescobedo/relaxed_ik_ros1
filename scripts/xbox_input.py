@@ -51,7 +51,7 @@ class GraspLoop:
             result_array = np.array(float_arrays)
 
         # print(result_array)
-        self.grasp_dict = result_array
+        self.grasp_list = result_array
         self.__release_flag = [0]
         self.__grasp_flag = [1]
         self.__wait_flag = [2]
@@ -274,8 +274,7 @@ class XboxInput:
         rospy.Subscriber("/franka_state_controller/franka_states", FrankaState, self.fr_state_cb)
         rospy.Subscriber("/estimated_approach_frame", Float32MultiArray, self.l_shaped_callback)
         rospy.sleep(1.0)
-        rospy.Timer(rospy.Duration(0.001), self.timer_callback)
-        rospy.spin()
+        rospy.Timer(rospy.Duration(0.01), self.timer_callback)
 
     def joy_cb(self, data):
         self.joy_data = data
@@ -334,8 +333,8 @@ class XboxInput:
 
     def move_gripper(self):
         print('In move gripper grip_cur: ', self.grip_cur)
-        self.grasp_loop.hiro_g.set_grasp_width(self.grip_cur)
-        self.grasp_loop.hiro_g.grasp()
+        self.grasp_loop.set_grasp_width(self.grip_cur)
+        self.grasp_loop.grasp()
 
     def on_release(self):
         self.linear = [0,0,0]
@@ -436,12 +435,11 @@ class XboxInput:
         return False
 
     def move_through_list(self):
-        print(self.grasp_loop.grasp_dict)
-        print(self.grasp_list)
+        print(self.grasp_loop.grasp_list)
         if self.fr_state:
             if not self.made_loop:
                 self.made_loop = True
-                self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
+                self.grasp_loop = GraspLoop(self.flag, self.franka_pose, self.og_x_a)
                 print("Made GraspLoop in list")
 
             line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
@@ -637,4 +635,6 @@ if __name__ == '__main__':
     flag = rospy.get_param("/xbox_input/flag")
     rospy.init_node('xbox_input')
     xController = XboxInput(flag=flag)
+    rospy.spin()
+
     

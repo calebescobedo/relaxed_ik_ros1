@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
+import actionlib
 import franka_gripper.msg
 import rospy
 import sys
-import actionlib
 from std_msgs.msg import Float32MultiArray
 
 
