@@ -17,6 +17,7 @@ import hiro_grasp
 from klampt.math import so3
 from visualization_msgs.msg import Marker
 import numpy as np
+from franka_example_controllers.msg import JointTorqueComparison
 import fcl
 import copy
 from sklearn.preprocessing import normalize
@@ -52,15 +53,16 @@ class GraspLoop:
             lines = file.readlines()
             float_arrays = [np.array(eval(line)) for line in lines]
             result_array = np.array(float_arrays)
-        
+
         
         self.grasp_list = result_array
         self.__release_flag = [0]
         self.__grasp_flag = [1]
         self.__wait_flag = [2]
         self.__end_flag = [3]
-
         self.cur_list_idx = 0
+        self.error_bound = 0.012
+
 
 
         self.__hiro_g = hiro_grasp.hiro_grasp()
@@ -145,12 +147,31 @@ class GraspLoop:
             exit()
         self.cur_list_idx = self.cur_list_idx % len(self.grasp_list)
         self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+    
+    
+    def next_flag_is_grasp_or_release(self, error):
+        list_idx = self.cur_list_idx + 1 
+        if list_idx >= len(self.grasp_list):
+            return False
+        # self.cur_list_idx = self.cur_list_idx % len(self.grasp_list)
+        ret = self.grasp_list[list_idx]
+        if len(ret) == 1 and self.is_in_error_bound(error):
+            return True
+        else:
+            return False
+
+    def is_in_error_bound(self, error):
+        error_sum = sum([abs(elem) for elem in error])
+        print(f"ERR SUM: {error_sum}")
+        if error_sum < self.error_bound:
+            return True
+        else:
+            return False
+
 
     def check_next_state(self, error):
-        error_bound = 0.012
-        error_sum = sum([abs(elem) for elem in error])
         ret = False
-        if error_sum < error_bound:
+        if self.is_in_error_bound(error):
             if not self.__pose_order_list:
                 self.__inc_pose_list()
                 if self.grasp_list[self.cur_list_idx][0] == self.__grasp_flag:
@@ -158,22 +179,26 @@ class GraspLoop:
                     self.__hiro_g.grasp()
                     rospy.sleep(2.0)
                     self.__inc_pose_list()
+                    print("GRASPEDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+                    ret = True
                 elif self.grasp_list[self.cur_list_idx][0] == self.__release_flag:
                     self.__hiro_g.open()
                     rospy.sleep(2.0)
                     self.__inc_pose_list()
+                    print("RELEASEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+                    ret = True
                 elif self.grasp_list[self.cur_list_idx][0] == self.__end_flag:
                     exit()
 
-                if len(self.grasp_list[self.cur_list_idx]) == 2 and self.grasp_list[self.cur_list_idx][0] == self.__wait_flag:
-                    sleep_time = 300
-                    self.wait_time_seconds(self.grasp_list[self.cur_list_idx][1])
-                    self.__inc_pose_list()
-                return ret
-            if self.__pose_order_list[self.__cur_idx] == "x_d":
-                self.__hiro_g.open()
-                rospy.sleep(2.0)
-            ret = self.inc_state()
+                # if len(self.grasp_list[self.cur_list_idx]) == 2 and self.grasp_list[self.cur_list_idx][0] == self.__wait_flag:
+                #     sleep_time = 300
+                #     self.wait_time_seconds(self.grasp_list[self.cur_list_idx][1])
+                #     self.__inc_pose_list()
+                # return ret
+            # if self.__pose_order_list[self.__cur_idx] == "x_d":
+            #     self.__hiro_g.open()
+            #     rospy.sleep(2.0)
+            # ret = self.inc_state()
         if not self.__pose_order_list:
             return ret
         elif self.__pose_order_list[self.__cur_idx] == "grasp":
@@ -244,6 +269,7 @@ class XboxInput:
         self.fr_state = False
         self.error_state = [0.0, 0.0, 0.0]
         self.cur_list_idx = 0
+        self.contact = False
 
         self.fr_is_neg = False
         self.fr_set = False
@@ -268,7 +294,7 @@ class XboxInput:
         rospy.Subscriber("/gui_pub", String, self.gui_cb)
         rospy.Subscriber("/contact", Int32, self.contact_cb)
         rospy.sleep(1.0)
-        rospy.Timer(rospy.Duration(0.005), self.timer_callback)
+        rospy.Timer(rospy.Duration(0.01), self.timer_callback)
 
     def joy_cb(self, data):
         self.joy_data = data
@@ -294,6 +320,7 @@ class XboxInput:
 
         if y:
             print(f"POSE: {self.franka_pose}")
+            print(f"XYZ:{self.fr_position}, Quat: {self.fr_rotation_matrix}")
         if a:
            self.grip_cur += self.grip_inc 
         elif b:
@@ -568,9 +595,7 @@ class XboxInput:
         return False
 
     def move_through_list(self):
-        print("IN MOVE LIST")
         if self.fr_state:
-            print("FR STATE TRUE")
             if not self.made_loop:
                 self.made_loop = True
                 self.grasp_loop = GraspLoop(self.flag, self.gui_flag, self.grasp_pose, self.og_x_a)
@@ -602,17 +627,19 @@ class XboxInput:
             # actual_msg.ee_poses.append(self.grasp_loop.grasp_dict["x_goal"])
             # actual_msg.ee_poses = self.calc_error(self.grasp_loop.grasp_dict["x_goal"][:7])
             # self.ee_pose_goals_pub.publish(actual_msg)
-
+            # print(hiro_msg.data.copy())
             self.hiro_ee_vel_goals_pub.publish(hiro_msg)
-            # print(f"Wait for grasp {self.wait_for_new_grasp()}")
-            # print(f"Check for grasp: {self.__check_for_new_grasp()}")
-            # print(f"Prev grasp, grasp pose: {self.prev_grasp, self.grasp_pose}")
-            self.on_release()
-            if self.grasp_loop.check_next_state(self.error_state):
-                self.wait_for_new_grasp()
-                if not self.__check_for_new_grasp(): 
-                    print("LIST DONE")
-                    self.gui_flag = "Done"  
+            if self.grasp_loop.next_flag_is_grasp_or_release(self.error_state):
+                self.on_release()
+                hiro_msg.data[:3] = [0,0,0]
+                self.hiro_ee_vel_goals_pub.publish(hiro_msg)
+                print("ZEROOOOOOOOOOOOOOOOOOOO")
+                # self.wait_for_new_grasp
+                rospy.sleep(2)
+            self.grasp_loop.check_next_state(self.error_state)
+
+            # if self.grasp_loop.check_next_state(self.error_state):
+            #     self.wait_for_new_grasp()
 
     def linear_movement(self):
         if self.start_grasp and self.fr_state:
@@ -764,7 +791,7 @@ class XboxInput:
             self.grasp_loop = GraspLoop(self.flag, self.gui_flag, self.grasp_pose, self.og_x_a)
 
         fr_r = R.from_matrix(self.fr_rotation_matrix)
-        fr_quat = fr_r.as_quat()
+        self.fr_quat = fr_r.as_quat()
         fr_e = fr_r.as_euler("xyz", degrees=False)
         fr_r = R.from_euler("xyz", fr_e, degrees=False)
         quat_2 = fr_r.as_quat()
@@ -776,11 +803,12 @@ class XboxInput:
         fcl_cone = self.make_fcl_cone()
         self.franka_pose = []
         self.franka_pose.extend(self.fr_position)
-        self.franka_pose.extend(fr_quat)
+        self.franka_pose.extend(self.fr_quat)
 
         self.pub_cone_as_cylinders(self.og_x_a, self.grasp_pose, self.og_quat)
-        self.in_collision = self.check_collide(fcl_ee, self.fr_position, [fr_quat[3], fr_quat[0], fr_quat[1], fr_quat[2]]
+        self.in_collision = self.check_collide(fcl_ee, self.fr_position, [self.fr_quat[3], self.fr_quat[0], self.fr_quat[1], self.fr_quat[2]]
                         ,fcl_cone, self.grasp_midpoint[:3], [self.og_quat[3], self.og_quat[0], self.og_quat[1], self.og_quat[2]])
+
 
         self.pub_closest_point(self.nearest_cone_points[1])
         for i in range(self.robot.num_chain):
@@ -856,7 +884,6 @@ class XboxInput:
     def contact_cb(self, msg):
         if msg.data > 75:
             self.linear[1] -= self.pos_stride * 0.75
-
 
 if __name__ == '__main__':
     flag = rospy.get_param("/xbox_input/flag")

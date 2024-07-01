@@ -4,7 +4,7 @@ import rospy
 import rospkg
 import actionlib
 from geometry_msgs.msg import Twist
-from relaxed_ik_ros1.msg import EEVelGoals
+from relaxed_ik_ros1.msg import EEVelGoals, EEPoseGoals
 import transformations as T
 from robot import Robot
 from sensor_msgs.msg import Joy
@@ -223,8 +223,9 @@ class XboxInput:
         self.x_a = [0,0,0,0,0,0,0]
         self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.x_a)
 
-        self.ee_vel_goals_pub = rospy.Publisher('relaxed_ik/ee_vel_goals', EEVelGoals, queue_size=1)
+        self.ee_pose_goals_pub = rospy.Publisher('relaxed_ik/ee_vel_goals', EEVelGoals, queue_size=1)
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
+        self.ee_vel_goals_pub = rospy.Publisher('relaxed_ik/ee_pose_goals', EEPoseGoals, queue_size=1)
         self.pos_stride = 0.003
         self.rot_stride = 0.0125
         self.p_t = 0.02
@@ -439,11 +440,12 @@ class XboxInput:
         if self.fr_state:
             if not self.made_loop:
                 self.made_loop = True
-                self.grasp_loop = GraspLoop(self.flag, self.franka_pose, self.og_x_a)
+                self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
                 print("Made GraspLoop in list")
 
             line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
             hiro_msg = Float64MultiArray()
+            # pose_msg = EEPoseGoals()
             self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
             
             hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
@@ -465,7 +467,9 @@ class XboxInput:
             hiro_msg.data.append(self.grasp_pose[1])
             hiro_msg.data.append(self.grasp_pose[2])
 
-            self.hiro_ee_vel_goals_pub.publish(hiro_msg)
+            print(hiro_msg.data.copy())
+
+            self.ee_vel_goals_pub.publish(hiro_msg)
             self.on_release()
             if self.grasp_loop.check_next_state(self.error_state):
                 self.wait_for_new_grasp()
