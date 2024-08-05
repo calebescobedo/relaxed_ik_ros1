@@ -16,3 +16,6 @@ csv_files/
 rmob_files/
 rmoo_files/
 starting_configs/
+
+#Data file, should not be uploaded to git - Noah
+scripts/xyz_data.csv

@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/caleb/catkin_ws/src/relaxed_ik_ros1/build/devel/setup.sh

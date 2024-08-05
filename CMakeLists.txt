@@ -7,7 +7,7 @@ project(relaxed_ik_ros1)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS std_msgs message_generation geometry_msgs interactive_markers visualization_msgs)
+find_package(catkin REQUIRED COMPONENTS rospy std_msgs message_generation geometry_msgs interactive_markers visualization_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -51,7 +51,8 @@ find_package(catkin REQUIRED COMPONENTS std_msgs message_generation geometry_msg
 add_message_files(
    FILES
    EEPoseGoals.msg
-   JointAngles.msg
+   EEVelGoals.msg
+   GUIMsg.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -62,9 +63,8 @@ add_message_files(
 # )
 add_service_files(
    FILES
-   RelaxedIKSolution.srv
-   IKSolution.srv
-   SelfCollisionQuery.srv
+   IKPose.srv
+   IKVelocity.srv
 )
 
 ## Generate actions in the 'action' folder
