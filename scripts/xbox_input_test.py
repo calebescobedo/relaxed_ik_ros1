@@ -154,6 +154,7 @@ class GraspLoop:
         self.cur_list_idx += 1 
         # if self.cur_list_idx >= len(self.grasp_list):
         #     exit()
+        # if cur_list_idx[-1] >= len(self.grasp_list):
         self.cur_list_idx = self.cur_list_idx % (len(self.grasp_list)-1)
         self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
     
@@ -443,6 +444,11 @@ class XboxInput:
                 temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
                 self.append_state_to_file(temp_cur_pose)
                 self.append_grip_action_to_file(self.grasp_loop.release_flag)
+                temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+                self.append_state_to_file(temp_cur_pose)
+                temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
+                self.append_state_to_file(temp_cur_pose)
+                self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
                 temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
                 self.append_state_to_file(temp_cur_pose)
 
