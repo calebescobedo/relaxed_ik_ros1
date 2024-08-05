@@ -132,6 +132,7 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/relaxed_ik_ros1/msg" TYPE FILE FILES
     "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg"
     "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg"
+    "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg"
     )
 endif()
 

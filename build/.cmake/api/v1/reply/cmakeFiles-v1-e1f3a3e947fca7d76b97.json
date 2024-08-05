@@ -464,6 +464,14 @@
 		},
 		{
 			"isExternal" : true,
+			"path" : "/opt/ros/noetic/share/rospy/cmake/rospyConfig-version.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/opt/ros/noetic/share/rospy/cmake/rospyConfig.cmake"
+		},
+		{
+			"isExternal" : true,
 			"path" : "/opt/ros/noetic/share/std_msgs/cmake/std_msgsConfig-version.cmake"
 		},
 		{
@@ -690,14 +698,6 @@
 		{
 			"isExternal" : true,
 			"path" : "/opt/ros/noetic/share/roscpp/cmake/roscpp-msg-extras.cmake"
-		},
-		{
-			"isExternal" : true,
-			"path" : "/opt/ros/noetic/share/rospy/cmake/rospyConfig-version.cmake"
-		},
-		{
-			"isExternal" : true,
-			"path" : "/opt/ros/noetic/share/rospy/cmake/rospyConfig.cmake"
 		},
 		{
 			"isExternal" : true,

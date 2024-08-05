@@ -1,6 +1,6 @@
 # generated from genmsg/cmake/pkg-genmsg.context.in
 
-messages_str = "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg;/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg"
+messages_str = "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg;/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg;/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg"
 services_str = "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv;/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv"
 pkg_name = "relaxed_ik_ros1"
 dependencies_str = "geometry_msgs;std_msgs;visualization_msgs"

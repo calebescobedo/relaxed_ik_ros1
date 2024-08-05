@@ -1,6 +1,6 @@
 # generated from genmsg/cmake/pkg-genmsg.cmake.em
 
-message(STATUS "relaxed_ik_ros1: 2 messages, 2 services")
+message(STATUS "relaxed_ik_ros1: 3 messages, 2 services")
 
 set(MSG_I_FLAGS "-Irelaxed_ik_ros1:/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg;-Igeometry_msgs:/opt/ros/noetic/share/geometry_msgs/cmake/../msg;-Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg;-Ivisualization_msgs:/opt/ros/noetic/share/visualization_msgs/cmake/../msg")
 
@@ -19,22 +19,27 @@ add_custom_target(relaxed_ik_ros1_generate_messages ALL)
 
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg" NAME_WE)
 add_custom_target(_relaxed_ik_ros1_generate_messages_check_deps_${_filename}
-  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg" "geometry_msgs/Vector3:geometry_msgs/Point:geometry_msgs/Twist:geometry_msgs/Pose:std_msgs/Header:geometry_msgs/Quaternion"
+  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg" "geometry_msgs/Vector3:geometry_msgs/Point:std_msgs/Header:geometry_msgs/Twist:geometry_msgs/Quaternion:geometry_msgs/Pose"
 )
 
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" NAME_WE)
 add_custom_target(_relaxed_ik_ros1_generate_messages_check_deps_${_filename}
-  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" "std_msgs/Header:geometry_msgs/Vector3:geometry_msgs/Twist"
+  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" "geometry_msgs/Twist:std_msgs/Header:geometry_msgs/Vector3"
+)
+
+get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg" NAME_WE)
+add_custom_target(_relaxed_ik_ros1_generate_messages_check_deps_${_filename}
+  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg" ""
 )
 
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" NAME_WE)
 add_custom_target(_relaxed_ik_ros1_generate_messages_check_deps_${_filename}
-  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" "geometry_msgs/Vector3:geometry_msgs/Point:geometry_msgs/Twist:geometry_msgs/Pose:geometry_msgs/Quaternion"
+  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" "geometry_msgs/Vector3:geometry_msgs/Point:geometry_msgs/Twist:geometry_msgs/Quaternion:geometry_msgs/Pose"
 )
 
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv" NAME_WE)
 add_custom_target(_relaxed_ik_ros1_generate_messages_check_deps_${_filename}
-  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv" "geometry_msgs/Vector3:geometry_msgs/Twist"
+  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "relaxed_ik_ros1" "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv" "geometry_msgs/Twist:geometry_msgs/Vector3"
 )
 
 #
@@ -46,13 +51,19 @@ add_custom_target(_relaxed_ik_ros1_generate_messages_check_deps_${_filename}
 _generate_msg_cpp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${gencpp_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_msg_cpp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
+  ${CATKIN_DEVEL_PREFIX}/${gencpp_INSTALL_DIR}/relaxed_ik_ros1
+)
+_generate_msg_cpp(relaxed_ik_ros1
+  "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg"
+  "${MSG_I_FLAGS}"
+  ""
   ${CATKIN_DEVEL_PREFIX}/${gencpp_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -60,13 +71,13 @@ _generate_msg_cpp(relaxed_ik_ros1
 _generate_srv_cpp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${gencpp_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_srv_cpp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
   ${CATKIN_DEVEL_PREFIX}/${gencpp_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -86,6 +97,8 @@ get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/
 add_dependencies(relaxed_ik_ros1_generate_messages_cpp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_cpp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
+get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg" NAME_WE)
+add_dependencies(relaxed_ik_ros1_generate_messages_cpp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_cpp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv" NAME_WE)
@@ -103,13 +116,19 @@ list(APPEND ${PROJECT_NAME}_EXPORTED_TARGETS relaxed_ik_ros1_generate_messages_c
 _generate_msg_eus(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${geneus_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_msg_eus(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
+  ${CATKIN_DEVEL_PREFIX}/${geneus_INSTALL_DIR}/relaxed_ik_ros1
+)
+_generate_msg_eus(relaxed_ik_ros1
+  "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg"
+  "${MSG_I_FLAGS}"
+  ""
   ${CATKIN_DEVEL_PREFIX}/${geneus_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -117,13 +136,13 @@ _generate_msg_eus(relaxed_ik_ros1
 _generate_srv_eus(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${geneus_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_srv_eus(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
   ${CATKIN_DEVEL_PREFIX}/${geneus_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -143,6 +162,8 @@ get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/
 add_dependencies(relaxed_ik_ros1_generate_messages_eus _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_eus _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
+get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg" NAME_WE)
+add_dependencies(relaxed_ik_ros1_generate_messages_eus _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_eus _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv" NAME_WE)
@@ -160,13 +181,19 @@ list(APPEND ${PROJECT_NAME}_EXPORTED_TARGETS relaxed_ik_ros1_generate_messages_e
 _generate_msg_lisp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${genlisp_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_msg_lisp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
+  ${CATKIN_DEVEL_PREFIX}/${genlisp_INSTALL_DIR}/relaxed_ik_ros1
+)
+_generate_msg_lisp(relaxed_ik_ros1
+  "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg"
+  "${MSG_I_FLAGS}"
+  ""
   ${CATKIN_DEVEL_PREFIX}/${genlisp_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -174,13 +201,13 @@ _generate_msg_lisp(relaxed_ik_ros1
 _generate_srv_lisp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${genlisp_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_srv_lisp(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
   ${CATKIN_DEVEL_PREFIX}/${genlisp_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -200,6 +227,8 @@ get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/
 add_dependencies(relaxed_ik_ros1_generate_messages_lisp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_lisp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
+get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg" NAME_WE)
+add_dependencies(relaxed_ik_ros1_generate_messages_lisp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_lisp _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv" NAME_WE)
@@ -217,13 +246,19 @@ list(APPEND ${PROJECT_NAME}_EXPORTED_TARGETS relaxed_ik_ros1_generate_messages_l
 _generate_msg_nodejs(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${gennodejs_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_msg_nodejs(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
+  ${CATKIN_DEVEL_PREFIX}/${gennodejs_INSTALL_DIR}/relaxed_ik_ros1
+)
+_generate_msg_nodejs(relaxed_ik_ros1
+  "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg"
+  "${MSG_I_FLAGS}"
+  ""
   ${CATKIN_DEVEL_PREFIX}/${gennodejs_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -231,13 +266,13 @@ _generate_msg_nodejs(relaxed_ik_ros1
 _generate_srv_nodejs(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${gennodejs_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_srv_nodejs(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
   ${CATKIN_DEVEL_PREFIX}/${gennodejs_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -257,6 +292,8 @@ get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/
 add_dependencies(relaxed_ik_ros1_generate_messages_nodejs _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_nodejs _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
+get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg" NAME_WE)
+add_dependencies(relaxed_ik_ros1_generate_messages_nodejs _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_nodejs _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv" NAME_WE)
@@ -274,13 +311,19 @@ list(APPEND ${PROJECT_NAME}_EXPORTED_TARGETS relaxed_ik_ros1_generate_messages_n
 _generate_msg_py(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${genpy_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_msg_py(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
+  ${CATKIN_DEVEL_PREFIX}/${genpy_INSTALL_DIR}/relaxed_ik_ros1
+)
+_generate_msg_py(relaxed_ik_ros1
+  "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg"
+  "${MSG_I_FLAGS}"
+  ""
   ${CATKIN_DEVEL_PREFIX}/${genpy_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -288,13 +331,13 @@ _generate_msg_py(relaxed_ik_ros1
 _generate_srv_py(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Point.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Quaternion.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Pose.msg"
   ${CATKIN_DEVEL_PREFIX}/${genpy_INSTALL_DIR}/relaxed_ik_ros1
 )
 _generate_srv_py(relaxed_ik_ros1
   "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKVelocity.srv"
   "${MSG_I_FLAGS}"
-  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg"
+  "/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Twist.msg;/opt/ros/noetic/share/geometry_msgs/cmake/../msg/Vector3.msg"
   ${CATKIN_DEVEL_PREFIX}/${genpy_INSTALL_DIR}/relaxed_ik_ros1
 )
 
@@ -313,6 +356,8 @@ add_dependencies(relaxed_ik_ros1_generate_messages relaxed_ik_ros1_generate_mess
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEPoseGoals.msg" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_py _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/EEVelGoals.msg" NAME_WE)
+add_dependencies(relaxed_ik_ros1_generate_messages_py _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
+get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/msg/GUIMsg.msg" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_py _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
 get_filename_component(_filename "/home/caleb/catkin_ws/src/relaxed_ik_ros1/srv/IKPose.srv" NAME_WE)
 add_dependencies(relaxed_ik_ros1_generate_messages_py _relaxed_ik_ros1_generate_messages_check_deps_${_filename})
