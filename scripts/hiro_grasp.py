@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
+import actionlib
 import franka_gripper.msg
 import rospy
 import sys
-import actionlib
 from std_msgs.msg import Float32MultiArray
 
 
@@ -34,11 +34,11 @@ class hiro_grasp:
         goal.epsilon.outer = self.__outer
         goal.speed = self.__speed
         goal.force = self.__force
-        # print('send goal')
-        # print(goal)
+        print('send goal')
+        print(goal)
         self.client.send_goal(goal)
         # self.client.wait_for_result()
-        # print('goal sent')
+        print('goal sent')
 
     def open(self):
         self.__set_open_grasp()

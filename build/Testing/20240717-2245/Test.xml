@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20240717-2245-Experimental"
+	Name="marmot-pc"
+	Generator="ctest-3.16.3"
+	CompilerName="/usr/bin/c++"
+	CompilerVersion="9.4.0"
+	OSName="Linux"
+	Hostname="marmot-pc"
+	OSRelease="5.15.111-rt63"
+	OSVersion="#1 SMP PREEMPT_RT Fri May 19 14:45:34 MDT 2023"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="AuthenticAMD"
+	VendorID="Advanced Micro Devices"
+	FamilyID="25"
+	ModelID="80"
+	ProcessorCacheSize="512"
+	NumberOfLogicalCPU="16"
+	NumberOfPhysicalCPU="8"
+	TotalVirtualMemory="37828"
+	TotalPhysicalMemory="31366"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="3800"
+	>
+	<Testing>
+		<StartDateTime>Jul 17 16:45 MDT</StartDateTime>
+		<StartTestTime>1721256328</StartTestTime>
+		<TestList/>
+		<EndDateTime>Jul 17 16:45 MDT</EndDateTime>
+		<EndTestTime>1721256328</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>
