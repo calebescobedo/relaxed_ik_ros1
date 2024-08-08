@@ -139,6 +139,9 @@ class GraspLoop:
             self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
             self.grasp_pose = self.grasp_dict["x_goal"]
             return None
+        elif self.flag == "xbox":
+            self.grasp_dict["x_goal"] = self.grasp_dict["x_g"]
+        
 
     def update_grasp_goal(self):
         self.grasp_dict["x_goal"] = self.grasp_dict[self.__pose_order_list[self.__cur_idx]]
@@ -291,8 +294,8 @@ class XboxInput:
         self.max_pos_stride = 0.0006
         self.max_rot_stride = 0.00375
         
-        self.p_t = 0.0028 * 4
-        self.p_r = 0.004  * 4
+        self.p_t = 0.0028
+        self.p_r = 0.004
         self.rot_error = [0.0, 0.0, 0.0]
 
         self.z_offset = 0.0
@@ -408,6 +411,7 @@ class XboxInput:
             # Execute the current saved trajectory file
             # Maybe as simple as changing the flat to list?
             print("BIG X PRESSED")
+            self.grasp_pose = self.franka_pose
             self.flag = "list"
             self.made_loop = False
             self.og_set = False
@@ -416,6 +420,9 @@ class XboxInput:
         if x:
             # change the flag back to xbox control
             print("X PRESSED")
+            if self.transfer_first_grasp_taken:
+                self.transfer_first_grasp_taken = False
+            self.grasp_pose = self.franka_pose
             self.flag = "xbox"
             self.made_loop = False
             self.og_set = False
@@ -427,7 +434,9 @@ class XboxInput:
             # impedance to 0.0 for all joints
             # This will allow us to move the robot by hand and save the states.
             self.set_to_hand_control()
-            self.og_set = False
+            # if self.transfer_first_grasp_taken:
+            #     self.transfer_first_grasp_taken = False
+            # self.og_set = False
 
         if back_button:
             with open(self.write_file, 'w') as file:
@@ -1012,6 +1021,8 @@ class XboxInput:
             self.cone()
         elif self.flag == "list" and self.gui_flag == "Go":
             self.move_through_list()
+        elif self.flag == "impedance":
+            self.grasp_pose = self.franka_pose
 
     def subscriber_callback(self, data):
         zero = [0.0, 0.0, 0.0]
