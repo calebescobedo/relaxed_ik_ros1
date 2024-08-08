@@ -4,7 +4,7 @@ from copy import deepcopy
 import rospy
 import rospkg
 import actionlib
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, WrenchStamped
 from relaxed_ik_ros1.msg import EEVelGoals, EEPoseGoals, GUIMsg
 import transformations as T
 from robot import Robot
@@ -70,7 +70,10 @@ class GraspLoop:
         self.__wait_flag = [2]
         self.__end_flag = [3]
         self.cur_list_idx = 0
-        self.error_bound = 0.012
+        self.error_bound = 0.006
+        self.end_flag = False
+        self.repeat_flag = False
+        self.repeat_place_flag = False
 
 
 
@@ -82,6 +85,10 @@ class GraspLoop:
         self.y_history_list = []
         self.z_history_list = []
         self.max_history_len = 50
+        self.ext_force = 0.0
+        self.z_force_release_flag = False
+
+        rospy.Subscriber("/franka_state_controller/F_ext", WrenchStamped, self.fr_ext_cb)
 
     def set_x_c(self, x_c):
         self.grasp_dict["x_c"] = x_c
@@ -151,11 +158,15 @@ class GraspLoop:
         return False
     
     def __inc_pose_list(self):
+        print(f'GRASP LIST: {self.grasp_list}, CURR GOAL: {self.grasp_dict["x_goal"]}, CUR LIST IDX: {self.cur_list_idx}')
         self.cur_list_idx += 1 
-        # if self.cur_list_idx >= len(self.grasp_list):
-        #     exit()
-        # if cur_list_idx[-1] >= len(self.grasp_list):
-        self.cur_list_idx = self.cur_list_idx % (len(self.grasp_list)-1)
+        if self.repeat_flag and self.cur_list_idx == 1:    
+            self.cur_list_idx += 1 
+        if self.cur_list_idx == len(self.grasp_list):
+            self.repeat_flag = True
+            self.repeat_place_flag = True
+        self.cur_list_idx = self.cur_list_idx % (len(self.grasp_list))
+        # self.update_grasp_goal()
         self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
     
     
@@ -180,43 +191,41 @@ class GraspLoop:
 
 
     def check_next_state(self, error):
+        self.z_force_drop_bound = 0.3
         ret = False
         if self.is_in_error_bound(error):
             if not self.__pose_order_list:
                 self.__inc_pose_list()
-                if self.grasp_list[self.cur_list_idx][0] == self.grasp_flag:
+                if self.repeat_flag and self.repeat_place_flag and self.cur_list_idx == 3:
+                    self.__hiro_g.open()
+                    rospy.sleep(2.0)
+                    self.cur_list_idx = 0
+                    self.repeat_place_flag = False
+                    self.repeat_flag = False
+                    self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+
+                if self.grasp_list[self.cur_list_idx][0] == self.grasp_flag and not (self.repeat_flag and self.cur_list_idx == 3):
                     self.__hiro_g.set_grasp_width(0.03)
                     self.__hiro_g.grasp()
-                    self.__hiro_g.grasp()
-                    self.__hiro_g.grasp()
-                    self.__hiro_g.grasp()
-                    self.__hiro_g.grasp()
                     rospy.sleep(2.0)
                     self.__inc_pose_list()
-                    # print("GRASPEDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
                     ret = True
-                elif self.grasp_list[self.cur_list_idx][0] == self.release_flag:
-                    self.__hiro_g.open()
-                    self.__hiro_g.open()
-                    self.__hiro_g.open()
-                    self.__hiro_g.open()
+                elif self.grasp_list[self.cur_list_idx][0] == self.release_flag or (self.repeat_flag and self.cur_list_idx == 3):
                     self.__hiro_g.open()
                     rospy.sleep(2.0)
                     self.__inc_pose_list()
-                    # print("RELEASEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
                     ret = True
-                # elif self.grasp_list[self.cur_list_idx][0] == self.__end_flag:
-                #     exit()
 
-                # if len(self.grasp_list[self.cur_list_idx]) == 2 and self.grasp_list[self.cur_list_idx][0] == self.__wait_flag:
-                #     sleep_time = 300
-                #     self.wait_time_seconds(self.grasp_list[self.cur_list_idx][1])
-                #     self.__inc_pose_list()
-                # return ret
-            # if self.__pose_order_list[self.__cur_idx] == "x_d":
-            #     self.__hiro_g.open()
-            #     rospy.sleep(2.0)
-            # ret = self.inc_state()
+        elif self.z_force_release_flag and error[2] < self.z_force_drop_bound:
+                next_idx = (self.cur_list_idx + 1 ) % (len(self.grasp_list))
+                if self.grasp_list[next_idx][0] == self.release_flag:
+                    self.__hiro_g.open()
+                    rospy.sleep(2.0)
+                    ret = True
+                    self.__inc_pose_list()                    
+                    self.__inc_pose_list()  
+                    self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+
         if not self.__pose_order_list:
             return ret
         elif self.__pose_order_list[self.__cur_idx] == "grasp":
@@ -233,6 +242,13 @@ class GraspLoop:
             self.already_collided = False
             return True
         return False
+    
+    def fr_ext_cb(self, data):
+        self.ext_force = data.wrench.force.z
+        if self.ext_force >= 1.0:
+            self.z_force_release_flag = True
+        else:
+            self.z_force_release_flag = False
 
 class XboxInput:
     def __init__(self, flag):
@@ -275,8 +291,8 @@ class XboxInput:
         self.max_pos_stride = 0.0006
         self.max_rot_stride = 0.00375
         
-        self.p_t = 0.0028
-        self.p_r = 0.004
+        self.p_t = 0.0028 * 4
+        self.p_r = 0.004  * 4
         self.rot_error = [0.0, 0.0, 0.0]
 
         self.z_offset = 0.0
@@ -366,8 +382,8 @@ class XboxInput:
             if abs(self.joy_data.buttons[5]) > 0.2:
                 self.angular[2] -= self.rot_stride
 
-        print(self.angular)
-        print(self.linear)
+        # print(self.angular)
+        # print(self.linear)
 
         a = data.buttons[0]
         b = data.buttons[1]
@@ -413,11 +429,11 @@ class XboxInput:
             self.set_to_hand_control()
             self.og_set = False
 
-        
         if back_button:
             with open(self.write_file, 'w') as file:
                 file.write("")
-
+            self.repeat_flag = False
+            self.repeat_place_flag = False
 
         if y:
             self.y_check += 1
@@ -435,7 +451,6 @@ class XboxInput:
                 self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
                 first_temp[2] = first_temp[2] + self.transfer_z_offset
                 self.append_state_to_file(first_temp)
-
             else:
                 temp_cur_pose = deepcopy(self.franka_pose)
                 temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
