@@ -9,6 +9,8 @@
     <node pkg="relaxed_ik_ros1" type="gui_option1.py" name="gui_option1" output="screen">
         <param name="config_file" value="$(find relaxed_ik_ros1)/scripts/Hades.json"/>
     </node>
-    <node pkg="joy" type="joy_node" name="joy" output="screen" />
+    <node pkg="joy" type="joy_node" name="joy" output="screen">
+        <param name="autorepeat_rate" value="100"/>
+    </node>
     <!-- <node pkg="relaxed_ik_ros1" type="SelfCapSkinPatch2x2Plot.py" name="skin_touch" output="screen" /> -->
 </launch>
