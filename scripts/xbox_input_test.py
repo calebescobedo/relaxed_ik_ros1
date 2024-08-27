@@ -39,7 +39,6 @@ def run_once(f):
 path_to_src = rospkg.RosPack().get_path('relaxed_ik_ros1') + '/relaxed_ik_core'
 class GraspLoop:
     def __init__(self, flag, gui_flag, grasp_pose, grasp_apprach,
-                 # TODO: fix the home and drop quat values, the robot gets twisted
                  home_pose=[0.30871, 0.000905, 0.48742, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
                  drop_pose = [0.23127, -0.5581, 0.31198, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
                  cone_radius=0.25, cone_height=0.25):
@@ -169,7 +168,6 @@ class GraspLoop:
             self.repeat_flag = True
             self.repeat_place_flag = True
         self.cur_list_idx = self.cur_list_idx % (len(self.grasp_list))
-        # self.update_grasp_goal()
         self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
     
     
@@ -177,7 +175,6 @@ class GraspLoop:
         list_idx = self.cur_list_idx + 1 
         if list_idx >= len(self.grasp_list):
             return False
-        # self.cur_list_idx = self.cur_list_idx % len(self.grasp_list)
         ret = self.grasp_list[list_idx]
         if len(ret) == 1 and self.is_in_error_bound(error):
             return True
@@ -186,12 +183,10 @@ class GraspLoop:
 
     def is_in_error_bound(self, error):
         error_sum = sum([abs(elem) for elem in error])
-        # print(f"ERR SUM: {error_sum}")
         if error_sum < self.error_bound:
             return True
         else:
             return False
-
 
     def check_next_state(self, error):
         self.z_force_drop_bound = 0.3
@@ -263,13 +258,7 @@ class XboxInput:
         if setting_file_path == '':
             setting_file_path = default_setting_file_path
 
-        # TODO: make sure it does not overwrite the file on each run
-        # right now it writes nothing into the file and this line 
-        # needs to be removed as to not overwrite the file we
-        # create at the end of the run.
         self.write_file = "/home/caleb/robochem_steps/b2_b1.txt"
-        # with open(self.write_file, 'w') as file:
-        #     file.write("")
 
         self.robot = Robot(setting_file_path)
         self.grasped = False
@@ -280,19 +269,14 @@ class XboxInput:
         self.ee_pose_goals_pub = rospy.Publisher('relaxed_ik/ee_pose_goals', EEPoseGoals, queue_size=1)
         self.ee_vel_goals_pub = rospy.Publisher('relaxed_ik/ee_vel_goals', EEVelGoals, queue_size=1)
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
-        # a ros publisher that sends a bool message to the topic "/impedance_change_bool"
         self.impedance_change_bool_pub = rospy.Publisher('impedance_change_bool', Bool, queue_size=1)
-        # TODO: change these back to og values for first human study
-        # self.pos_stride = 0.012
-        # self.rot_stride = 0.075
-        self.pos_stride = 0.006
-        self.rot_stride = 0.0375
-
-        self.min_pos_stride = 0.006
-        self.min_rot_stride = 0.0375
-
-        self.max_pos_stride = 0.0006
-        self.max_rot_stride = 0.00375
+        
+        self.pos_stride = 0.012
+        self.rot_stride = 0.075
+        self.min_pos_stride = 0.012
+        self.min_rot_stride = 0.075
+        self.max_pos_stride = 0.0012
+        self.max_rot_stride = 0.0075
         
         self.p_t = 0.0028
         self.p_r = 0.004
@@ -359,15 +343,12 @@ class XboxInput:
         rospy.Timer(rospy.Duration(0.01), self.timer_callback)
     
     def set_to_hand_control(self):
-        print("START PRESSED")
         self.flag = "impedance"
         self.made_loop = False
         self.impedance_change_bool_pub.publish(True)
 
     def joy_cb(self, data):
         self.joy_data = data
-        # print("franka pose", self.franka_pose)
-        # print("Joy Callback", self.flag)
 
         if self.flag == "xbox":
             if abs(self.joy_data.axes[1]) > 0.2:
@@ -385,22 +366,14 @@ class XboxInput:
             if abs(self.joy_data.buttons[5]) > 0.2:
                 self.angular[2] -= self.rot_stride
 
-        # print(self.angular)
-        # print(self.linear)
-
         a = data.buttons[0]
         b = data.buttons[1]
         x = data.buttons[2] 
         y = data.buttons[3]
         rt_trigger = data.axes[5]
 
-        #create a linear mapping so that the trigger value is between -1 and 1
-        # that value is then mapped to the min and max pos_stride 
-        # at an rt_trigger value of 1, the pos_stride is at its max value
-        # at an rt_trigger value of -1, the pos_stride is at its min value
         self.pos_stride = (rt_trigger + 1) / 2 * (self.max_pos_stride - self.min_pos_stride) + self.min_pos_stride
         self.rot_stride = (rt_trigger + 1) / 2 * (self.max_rot_stride - self.min_rot_stride) + self.min_rot_stride
-        # self.pos_stride 
 
         back_button = data.buttons[6]
         start_button = data.buttons[7]
@@ -408,35 +381,27 @@ class XboxInput:
 
 
         if big_x:
-            # Execute the current saved trajectory file
-            # Maybe as simple as changing the flat to list?
-            print("BIG X PRESSED")
-            self.grasp_pose = self.franka_pose
             self.flag = "list"
             self.made_loop = False
             self.og_set = False
             self.impedance_change_bool_pub.publish(False)
+            self.grasp_pose = self.franka_pose
+
             
         if x:
-            # change the flag back to xbox control
-            print("X PRESSED")
             if self.transfer_first_grasp_taken:
                 self.transfer_first_grasp_taken = False
-            self.grasp_pose = self.franka_pose
             self.flag = "xbox"
             self.made_loop = False
             self.og_set = False
+            self.grasp_pose = self.franka_pose
 
             self.impedance_change_bool_pub.publish(False)
 
         if start_button:
-            # Send a ros message to impedance controller to change the 
-            # impedance to 0.0 for all joints
-            # This will allow us to move the robot by hand and save the states.
             self.set_to_hand_control()
-            # if self.transfer_first_grasp_taken:
-            #     self.transfer_first_grasp_taken = False
-            # self.og_set = False
+            if self.transfer_first_grasp_taken:
+                self.transfer_first_grasp_taken = False
 
         if back_button:
             with open(self.write_file, 'w') as file:
@@ -481,18 +446,15 @@ class XboxInput:
         if not y: self.y_check = 0
 
         if a:
-        #    self.grip_cur += self.grip_inc 
            self.grip_cur = 0.1
         elif b:
-            # self.grip_cur -= self.grip_inc 
-           self.grip_cur = 0.03
+           self.grip_cur = 0.01
+        # print(f"MODE: {self.flag} GOAL: {self.grasp_pose}, FRANKA: {self.franka_pose}")
 
         if a or b:
             if (time.time() - self.last_grasp_time) >= 2.0:
                 self.move_gripper() 
                 self.last_grasp_time = time.time()
-        # if self.grip_cur > self.grip_max: self.grip_cur = self.grip_max
-        # if self.grip_cur < self.grip_min: self.grip_cur = self.grip_min
 
     def append_grip_action_to_file(self, action):
         with open(self.write_file, 'a') as file:
