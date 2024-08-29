@@ -332,11 +332,14 @@ class XboxInput:
         self.xyz_quat_goal = []
         self.y_check = 0
 
+        self.eulers = [0, 0, 0]
+
         rospy.Subscriber("/mid_grasp_point", Float32MultiArray, self.grasp_midpoint_callback)
         rospy.Subscriber("joy", Joy, self.joy_cb)
         rospy.Subscriber("final_grasp", Float32MultiArray, self.subscriber_callback)
         rospy.Subscriber("/franka_state_controller/franka_states", FrankaState, self.fr_state_cb)
         rospy.Subscriber("/estimated_approach_frame", Float32MultiArray, self.l_shaped_callback)
+        # rospy.Subscriber("/franka_gripper/joint_states", franka_gripper.msg.Grabbed, self.gripper_state_cb)
         rospy.Subscriber("/gui_pub", GUIMsg, self.gui_cb)
         rospy.Subscriber("/contact", Int32, self.contact_cb)
         rospy.sleep(1.0)
@@ -416,7 +419,12 @@ class XboxInput:
                 self.transfer_first_grasp_taken = True
                 self.transfer_first_z = self.franka_pose[2]
                 self.transfer_first_quat = self.franka_pose[3:]
+                # self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
+                # self.quats = R.from_quat([self.transfer_first_quat])
+                # self.eulers = self.quat_temp.as_euler('xyz', degrees=False)
+                # print(f"EULERS: {self.eulers}")
                 first_temp = deepcopy(self.franka_pose)
+                # first_temp[3] = 1.0
                 first_temp[2] = first_temp[2] + self.transfer_z_offset
                 self.append_state_to_file(first_temp)
                 self.append_grip_action_to_file(self.grasp_loop.release_flag)
@@ -428,7 +436,11 @@ class XboxInput:
             else:
                 temp_cur_pose = deepcopy(self.franka_pose)
                 temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+                # temp_cur_pose[3] = 1.0
                 temp_cur_pose[3:] = self.transfer_first_quat
+                # self.quat_temp = R.from_quat([self.franka_pose[3:]])
+                # self.eulers_temp = self.quat_temp.as_euler('xyz', degrees=False)
+                # print(f"EULERS: {self.eulers}")
                 self.append_state_to_file(temp_cur_pose)
                 temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
                 self.append_state_to_file(temp_cur_pose)
@@ -1027,6 +1039,9 @@ class XboxInput:
     def contact_cb(self, msg):
         if msg.data > 75:
             self.linear[1] -= self.pos_stride * 0.75
+
+    # def gripper_state_cb(self, msg):
+    #     self.grasped = msg.grabbed
 
 if __name__ == '__main__':
     flag = rospy.get_param("/xbox_input/flag")
