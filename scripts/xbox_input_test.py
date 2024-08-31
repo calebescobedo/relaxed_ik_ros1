@@ -4,7 +4,7 @@ from copy import deepcopy
 import rospy
 import rospkg
 import actionlib
-from geometry_msgs.msg import Twist, WrenchStamped
+from geometry_msgs.msg import Twist, WrenchStamped, Point, Quaternion, Pose
 from relaxed_ik_ros1.msg import EEVelGoals, EEPoseGoals, GUIMsg
 import transformations as T
 from robot import Robot
@@ -13,7 +13,7 @@ import franka_gripper.msg
 from std_msgs.msg import Int8MultiArray, Float64MultiArray,  Float32MultiArray, String, Int32, Bool
 from franka_msgs.msg import FrankaState
 from scipy.spatial.transform import Rotation as R
-from pyquaternion import Quaternion
+# from pyquaternion import Quaternion
 import hiro_grasp
 from klampt.math import so3
 from visualization_msgs.msg import Marker
@@ -160,7 +160,6 @@ class GraspLoop:
         return False
     
     def __inc_pose_list(self):
-        print(f'GRASP LIST: {self.grasp_list}, CURR GOAL: {self.grasp_dict["x_goal"]}, CUR LIST IDX: {self.cur_list_idx}')
         self.cur_list_idx += 1 
         if self.repeat_flag and self.cur_list_idx == 1:    
             self.cur_list_idx += 1 
@@ -329,10 +328,12 @@ class XboxInput:
         self.x_c = [0,0,0,0,0,0,0]
         self.last_grasp_time = time.time()
         self.cone_pub = rospy.Publisher('cone_viz', MarkerArray, queue_size=1)
+        self.marker_pub = rospy.Publisher('marker_list', MarkerArray, queue_size=1)
         self.xyz_quat_goal = []
         self.y_check = 0
 
         self.eulers = [0, 0, 0]
+        self.marker_list = []
 
         rospy.Subscriber("/mid_grasp_point", Float32MultiArray, self.grasp_midpoint_callback)
         rospy.Subscriber("joy", Joy, self.joy_cb)
@@ -409,6 +410,9 @@ class XboxInput:
         if back_button:
             with open(self.write_file, 'w') as file:
                 file.write("")
+            # if I detele the markers, then I also need to clear the grasp list
+            self.grasp_loop.grasp_list = []
+            self.delete_markers()
             self.repeat_flag = False
             self.repeat_place_flag = False
 
@@ -418,12 +422,14 @@ class XboxInput:
             if not self.transfer_first_grasp_taken:
                 self.transfer_first_grasp_taken = True
                 self.transfer_first_z = self.franka_pose[2]
-                self.transfer_first_quat = self.franka_pose[3:]
-                # self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
+                self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
+                self.transfer_first_quat = self.transfer_all_quat
+                # self.transfer_first_quat = self.franka_pose[3:]
                 # self.quats = R.from_quat([self.transfer_first_quat])
                 # self.eulers = self.quat_temp.as_euler('xyz', degrees=False)
                 # print(f"EULERS: {self.eulers}")
                 first_temp = deepcopy(self.franka_pose)
+                first_temp[3:] = self.transfer_first_quat
                 # first_temp[3] = 1.0
                 first_temp[2] = first_temp[2] + self.transfer_z_offset
                 self.append_state_to_file(first_temp)
@@ -571,7 +577,57 @@ class XboxInput:
                 self.prev_fr_euler[x] = fr_euler[x]
         return q_list[-1], fr_euler
 
-    def pub_cylinder(self, xyz, quat):
+    def pub_goal_array(self, goal_list):
+
+            # marker_pub = rospy.Publisher('/list_goal_list', Marker, queue_size=1)
+            # Make for loop that appends each of the xyz positions in goal to the marker array
+            # data type for publishing using the self.marker_pub variable.
+            # make it so the start color is red and the end color is green incrementally based on the
+            # number of markers in the list
+            marker_arr = MarkerArray()
+            colors_ = cm.rainbow(np.linspace(0, 1, len(goal_list)))
+            for idx, goal in enumerate(goal_list):
+                m = Marker()
+                m.ns = ""
+                m.header.frame_id = "fr3_link0"
+                m.id = idx
+                m.header.stamp = rospy.Time.now()
+                m.type = Marker.SPHERE
+                m.action = Marker.ADD
+                m.pose.position.x = goal[0]
+                m.pose.position.y = goal[1]
+                m.pose.position.z = goal[2]
+                m.scale = Vector3(0.05, 0.05, 0.05)
+                color = colors_[idx]
+                m.color = ColorRGBA(color[0], color[1], color[2], 0.5)
+                marker_arr.markers.append(m)
+            self.marker_pub.publish(marker_arr)
+
+            # marker = Marker()
+            # marker.header.frame_id = "fr3_link0"
+            # marker.ns = ""
+            # marker.header.stamp = rospy.Time.now()
+            # marker.id = 0
+            # marker.type = marker.CYLINDER
+            # marker.action = marker.ADD
+            # marker.color.a = 0.5
+            # marker.color.r = 0.0
+            # marker.color.g = 1.0
+            # marker.color.b = 1.0
+            # marker.scale.x = self.cone_radius
+            # marker.scale.y = self.cone_radius
+            # marker.scale.z = self.cone_height
+            # marker.pose.position.x = self.grasp_midpoint[0]
+            # marker.pose.position.y = self.grasp_midpoint[1]
+            # marker.pose.position.z = self.grasp_midpoint[2]
+            # marker.pose.orientation.x = quat[0]
+            # marker.pose.orientation.y = quat[1]
+            # marker.pose.orientation.z = quat[2]
+            # marker.pose.orientation.w = quat[3]
+            # marker_pub.publish(marker)
+
+
+    def pub_cylinder(self, goal_list):
 
         marker_pub = rospy.Publisher('/cylinder_grasp', Marker, queue_size=1)
         marker = Marker()
@@ -752,6 +808,16 @@ class XboxInput:
                 self.made_loop = True
                 self.grasp_loop = GraspLoop(self.flag, self.gui_flag, self.grasp_pose, self.og_x_a)
 
+            # self.marker_list = self.grasp_loop.grasp_list
+            # self.marker_list = [grasp for grasp in self.marker_list if len(grasp) == 7]
+            # self.pub_goal_array(self.marker_list)
+            # print(f"MARKER LIST: {self.marker_list}")
+            # self.marker_pub.publish(self.marker_list)
+
+            # self.pub_closest_point(self.grasp_pose[:3])
+            self.update_mode_and_grasp_visualization()
+
+
             line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
             hiro_msg = Float64MultiArray()
             self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
@@ -824,6 +890,7 @@ class XboxInput:
             if not self.made_loop:
                 self.made_loop = True
                 self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
+                
 
             line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
             hiro_msg = Float64MultiArray()
@@ -938,6 +1005,7 @@ class XboxInput:
             self.made_loop = True
             self.grasp_loop = GraspLoop(self.flag, self.gui_flag, self.grasp_pose, self.og_x_a)
 
+        self.update_mode_and_grasp_visualization()
         fr_r = R.from_matrix(self.fr_rotation_matrix)
         self.fr_quat = fr_r.as_quat()
         fr_e = fr_r.as_euler("xyz", degrees=False)
@@ -978,6 +1046,77 @@ class XboxInput:
             msg.tolerances.append(tolerance)
         self.ee_vel_goals_pub.publish(msg)
         self.on_release()
+    # create a new function that deletes all of the current markers from marker array so 
+    # they are not visualized in rviz
+    def delete_markers(self):
+        #deletes all of the current markers from marker array so they are not visualized in rviz
+        marker_arr = MarkerArray()
+        for idx in range(len(self.marker_list)):
+            m = Marker()
+            m.ns = ""
+            m.header.frame_id = "fr3_link0"
+            m.id = idx
+            m.header.stamp = rospy.Time.now()
+            m.action = Marker.DELETE
+            marker_arr.markers.append(m)
+        self.marker_pub.publish(marker_arr)
+
+    def update_grasp_list_visualization(self):
+        marker_arr = MarkerArray() 
+        # prune the grasp list so we only inluce elements that have 7 elements
+        self.marker_list = [grasp for grasp in self.grasp_loop.grasp_list if len(grasp) == 7]
+        colors_ = cm.rainbow(np.linspace(0, 1, len(self.marker_list)))
+        for idx, goal in enumerate(self.marker_list):
+            m = Marker()
+            m.ns = ""
+            m.header.frame_id = "fr3_link0"
+            m.id = idx
+            m.header.stamp = rospy.Time.now()
+            m.type = Marker.SPHERE
+            m.action = Marker.ADD
+            m.pose.position.x = goal[0]
+            m.pose.position.y = goal[1]
+            m.pose.position.z = goal[2]
+            m.scale = Vector3(0.05, 0.05, 0.05)
+            color = colors_[idx]
+            m.color = ColorRGBA(0.5, color[1], 0.5, 0.75)
+            # chage the color map so we only have a gradient for the red color channel
+            marker_arr.markers.append(m)
+        self.marker_pub.publish(marker_arr)
+    
+    def add_text_to_rvis_current_control_state(self):
+        # create a new marker array that will be used to display the current control state
+        marker_arr = MarkerArray()
+        # create a new marker object
+        m = Marker()
+        # set the frame id of the marker to be the base frame of the robot
+        m.header.frame_id = "fr3_link0"
+        # set the time stamp of the marker to the current time
+        m.header.stamp = rospy.Time.now()
+        # set the id of the marker to 0
+        m.id = 0
+        # set the type of the marker to be text
+        m.type = Marker.TEXT_VIEW_FACING
+        # set the action of the marker to be add
+        m.action = Marker.ADD
+        # set the scale of the marker to be 0.1
+        m.scale = Vector3(0.3, 0.3, 0.3)
+        # set the color of the marker to be red
+        m.color = ColorRGBA(1.0, 1.0, 1.0, 1.0)
+        # set the position of the marker to be the current position of the end effector
+        m.pose.position.x = 0
+        m.pose.position.y = 0
+        m.pose.position.z = 1.0
+        # set the text of the marker to be the current control state
+        m.text = self.flag
+        # append the marker to the marker array
+        marker_arr.markers.append(m)
+        # publish the marker array
+        self.marker_pub.publish(marker_arr)
+    def update_mode_and_grasp_visualization(self):
+        self.update_grasp_list_visualization()
+        self.add_text_to_rvis_current_control_state()
+
 
     def timer_callback(self, event):
         fr_r = R.from_matrix(self.fr_rotation_matrix)
@@ -985,6 +1124,13 @@ class XboxInput:
 
         self.franka_pose[:3] = self.fr_position
         self.franka_pose[3:] = self.fr_quat
+
+        # self.update_grasp_list_visualization()
+        # self.add_text_to_rvis_current_control_state()
+
+        if self.grasp_loop != None:
+                self.update_mode_and_grasp_visualization()
+
         if self.flag == "linear":
             self.linear_movement()
         elif self.flag == "xbox":
@@ -993,10 +1139,14 @@ class XboxInput:
             self.l_shaped_movement()
         elif self.flag == "cone":
             self.cone()
-        elif self.flag == "list" and self.gui_flag == "Go":
+        # elif self.flag == "list" and self.gui_flag == "Go":
+        elif self.flag == "list":
             self.move_through_list()
         elif self.flag == "impedance":
+            self.update_mode_and_grasp_visualization()
             self.grasp_pose = self.franka_pose
+
+        
 
     def subscriber_callback(self, data):
         zero = [0.0, 0.0, 0.0]
