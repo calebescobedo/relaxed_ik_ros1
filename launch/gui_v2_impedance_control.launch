@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="flag" default="linear" />
+    <arg name="flag" default="xbox" />
     <arg name="launch_rviz" default="true"/>
     <include file="$(find franka_example_controllers)/launch/hiro_joint_impedance_example_controller.launch" pass_all_args="true"/>
     <include file="$(find relaxed_ik_ros1)/launch/demo.launch" pass_all_args="true"/>
