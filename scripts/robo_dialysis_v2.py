@@ -449,12 +449,15 @@ class XboxInput:
             self.repeat_flag = False
             self.repeat_place_flag = False
             self.num_buckets = 0
+            self.curr_transfers = 1
+            self.transfer_first_grasp_taken = False
 
         if y:
             self.y_check += 1
         if self.y_check == 1 and self.fr_state and self.franka_pose[0]:
             self.num_buckets += 1
             if not self.transfer_first_grasp_taken:
+                print("FIRST GRASP")
                 self.transfer_first_grasp_taken = True
                 self.transfer_first_z = self.franka_pose[2]
                 self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
@@ -473,6 +476,7 @@ class XboxInput:
                 self.update_mode_and_grasp_visualization()
             else:
                 self.update_mode_and_grasp_visualization()
+                print("TRANSFER")
                 temp_cur_pose = deepcopy(self.franka_pose)
                 temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
                 temp_cur_pose[3:] = self.transfer_first_quat
