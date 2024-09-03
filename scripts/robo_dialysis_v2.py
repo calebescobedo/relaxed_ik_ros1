@@ -17,6 +17,7 @@ from scipy.spatial.transform import Rotation as R
 # from pyquaternion import Quaternion
 import hiro_grasp
 from klampt.math import so3
+import math
 from visualization_msgs.msg import Marker
 import numpy as np
 from franka_example_controllers.msg import JointTorqueComparison
@@ -43,6 +44,10 @@ class GraspLoop:
                  home_pose=[0.30871, 0.000905, 0.48742, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
                  drop_pose = [0.23127, -0.5581, 0.31198, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
                  cone_radius=0.25, cone_height=0.25):
+        # self.grasp_list = []
+        self.load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
+        self.read_file()
+        
         self.grasp_dict = {
             "x_g" : grasp_pose,
             "x_a" : grasp_apprach,
@@ -57,14 +62,7 @@ class GraspLoop:
 
         self.gui_flag = gui_flag
         self.home_pose = home_pose
-        self.load_file = "/home/caleb/robochem_steps/b2_b1.txt"
-        with open(self.load_file, 'r') as file:
-            lines = file.readlines()
-            float_arrays = [np.array(eval(line)) for line in lines]
-            result_array = np.array(float_arrays)
-            
-        
-        self.grasp_list = result_array
+
         self.release_flag = [0]
         self.grasp_flag = [1]
         self.__wait_flag = [2]
@@ -87,6 +85,7 @@ class GraspLoop:
         self.max_history_len = 50
         self.ext_force = 0.0
         self.z_force_release_flag = False
+        self.curr_transfers = 1
 
         rospy.Subscriber("/franka_state_controller/F_ext", WrenchStamped, self.fr_ext_cb)
 
@@ -136,11 +135,24 @@ class GraspLoop:
             return ["x_c", "x_g", "grasp", "x_h", "x_d", "x_h"]
 
         elif self.flag == "list":
-            self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+            print(self.grasp_list)
+            if len(self.grasp_list) == 0:
+                self.grasp_dict["x_goal"] = self.home_pose
+            else:
+                self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+
             self.grasp_pose = self.grasp_dict["x_goal"]
             return None
         elif self.flag == "xbox":
             self.grasp_dict["x_goal"] = self.grasp_dict["x_g"]
+
+    def read_file(self):
+        with open(self.load_file, 'r') as file:
+            lines = file.readlines()
+            float_arrays = [np.array(eval(line)) for line in lines]
+            result_array = np.array(float_arrays)
+            
+        self.grasp_list = result_array
         
 
     def update_grasp_goal(self):
@@ -167,8 +179,10 @@ class GraspLoop:
         if self.cur_list_idx == len(self.grasp_list):
             self.repeat_flag = True
             self.repeat_place_flag = True
-        self.cur_list_idx = self.cur_list_idx % (len(self.grasp_list))
-        self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+        if len(self.grasp_list) != 0:
+            self.cur_list_idx = self.cur_list_idx % (len(self.grasp_list))
+        if len(self.grasp_list) != 0:
+            self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
     
     
     def next_flag_is_grasp_or_release(self, error):
@@ -200,29 +214,32 @@ class GraspLoop:
                     self.cur_list_idx = 0
                     self.repeat_place_flag = False
                     self.repeat_flag = False
-                    self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
-
-                if self.grasp_list[self.cur_list_idx][0] == self.grasp_flag and not (self.repeat_flag and self.cur_list_idx == 3):
-                    self.__hiro_g.set_grasp_width(0.03)
-                    self.__hiro_g.grasp()
-                    rospy.sleep(2.0)
-                    self.__inc_pose_list()
-                    ret = True
-                elif self.grasp_list[self.cur_list_idx][0] == self.release_flag or (self.repeat_flag and self.cur_list_idx == 3):
-                    self.__hiro_g.open()
-                    rospy.sleep(2.0)
-                    self.__inc_pose_list()
-                    ret = True
+                    if len(self.grasp_list) != 0:
+                        self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+                if len(self.grasp_list) != 0:
+                    if self.grasp_list[self.cur_list_idx][0] == self.grasp_flag and not (self.repeat_flag and self.cur_list_idx == 3):
+                        self.curr_transfers += 1
+                        self.__hiro_g.set_grasp_width(0.03)
+                        self.__hiro_g.grasp()
+                        rospy.sleep(2.0)
+                        self.__inc_pose_list()
+                        ret = True
+                    elif self.grasp_list[self.cur_list_idx][0] == self.release_flag or (self.repeat_flag and self.cur_list_idx == 3):
+                        self.__hiro_g.open()
+                        rospy.sleep(2.0)
+                        self.__inc_pose_list()
+                        ret = True
 
         elif self.z_force_release_flag and error[2] < self.z_force_drop_bound:
-                next_idx = (self.cur_list_idx + 1 ) % (len(self.grasp_list))
-                if self.grasp_list[next_idx][0] == self.release_flag:
-                    self.__hiro_g.open()
-                    rospy.sleep(2.0)
-                    ret = True
-                    self.__inc_pose_list()                    
-                    self.__inc_pose_list()  
-                    self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
+                if len(self.grasp_list) != 0:
+                    next_idx = (self.cur_list_idx + 1 ) % (len(self.grasp_list))
+                    if self.grasp_list[next_idx][0] == self.release_flag:
+                        self.__hiro_g.open()
+                        rospy.sleep(2.0)
+                        ret = True
+                        self.__inc_pose_list()                    
+                        self.__inc_pose_list()  
+                        self.grasp_dict["x_goal"] = self.grasp_list[self.cur_list_idx]
 
         if not self.__pose_order_list:
             return ret
@@ -258,7 +275,7 @@ class XboxInput:
         if setting_file_path == '':
             setting_file_path = default_setting_file_path
 
-        self.write_file = "/home/caleb/robochem_steps/b2_b1.txt"
+        self.write_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
 
         self.robot = Robot(setting_file_path)
         self.grasped = False
@@ -300,6 +317,9 @@ class XboxInput:
         self.grasp_midpoint = [0,0,0,0,0,0,0]
         self.num_buckets = 0
         self.franka_pose = [0,0,0,0,0,0,0]
+        self.sequentail_str = "sequential"
+        self.parallel_str = "parallel"
+        self.dialysis_type = self.sequentail_str
 
         self.grip_cur = 0.08
         self.grip_inc = 0.01
@@ -333,6 +353,7 @@ class XboxInput:
         self.text_pub = rospy.Publisher("/text_overlay", OverlayText, queue_size=1)
         self.xyz_quat_goal = []
         self.y_check = 0
+        self.r_stick_check = 0
 
         self.eulers = [0, 0, 0]
         self.marker_list = []
@@ -342,8 +363,6 @@ class XboxInput:
         rospy.Subscriber("final_grasp", Float32MultiArray, self.subscriber_callback)
         rospy.Subscriber("/franka_state_controller/franka_states", FrankaState, self.fr_state_cb)
         rospy.Subscriber("/estimated_approach_frame", Float32MultiArray, self.l_shaped_callback)
-        # rospy.Subscriber("/franka_gripper/joint_states", franka_gripper.msg.Grabbed, self.gripper_state_cb)
-        rospy.Subscriber("/gui_pub", GUIMsg, self.gui_cb)
         rospy.Subscriber("/contact", Int32, self.contact_cb)
         rospy.sleep(1.0)
         rospy.Timer(rospy.Duration(0.01), self.timer_callback)
@@ -384,23 +403,35 @@ class XboxInput:
         back_button = data.buttons[6]
         start_button = data.buttons[7]
         big_x = data.buttons[8]
+        r_stick = data.buttons[10]
 
+        if r_stick:
+            self.r_stick_check += 1
+        if self.r_stick_check == 1 and self.fr_state and self.franka_pose[0]:
+            if self.dialysis_type == self.sequentail_str:
+                self.dialysis_type = self.parallel_str
+            else:
+                self.dialysis_type = self.sequentail_str
+        self.r_stick_check += 1
+
+        if not r_stick: self.r_stick_check = 0
 
         if big_x:
             self.flag = "list"
             self.made_loop = False
             self.og_set = False
-            self.impedance_change_bool_pub.publish(False)
             self.grasp_pose = self.franka_pose
+            self.impedance_change_bool_pub.publish(False)
 
             
         if x:
-            if self.transfer_first_grasp_taken:
-                self.transfer_first_grasp_taken = False
+            # if self.transfer_first_grasp_taken:
+            #     self.transfer_first_grasp_taken = False
             self.flag = "xbox"
             self.made_loop = False
             self.og_set = False
             self.grasp_pose = self.franka_pose
+            self.curr_transfers = 1
 
             self.impedance_change_bool_pub.publish(False)
 
@@ -417,10 +448,12 @@ class XboxInput:
             self.delete_markers()
             self.repeat_flag = False
             self.repeat_place_flag = False
+            self.num_buckets = 0
 
         if y:
             self.y_check += 1
         if self.y_check == 1 and self.fr_state and self.franka_pose[0]:
+            self.num_buckets += 1
             if not self.transfer_first_grasp_taken:
                 self.transfer_first_grasp_taken = True
                 self.transfer_first_z = self.franka_pose[2]
@@ -436,7 +469,10 @@ class XboxInput:
                 self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
                 first_temp[2] = first_temp[2] + self.transfer_z_offset
                 self.append_state_to_file(first_temp)
+                print(f"GRASP GOAL:{self.grasp_loop.grasp_dict['x_goal']}")
+                self.update_mode_and_grasp_visualization()
             else:
+                self.update_mode_and_grasp_visualization()
                 temp_cur_pose = deepcopy(self.franka_pose)
                 temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
                 temp_cur_pose[3:] = self.transfer_first_quat
@@ -452,6 +488,8 @@ class XboxInput:
                 temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
                 self.append_state_to_file(temp_cur_pose)
 
+            self.grasp_loop.read_file()
+
         self.y_check += 1
 
         if not y: self.y_check = 0
@@ -460,7 +498,6 @@ class XboxInput:
            self.grip_cur = 0.1
         elif b:
            self.grip_cur = 0.01
-        # print(f"MODE: {self.flag} GOAL: {self.grasp_pose}, FRANKA: {self.franka_pose}")
 
         if a or b:
             if (time.time() - self.last_grasp_time) >= 2.0:
@@ -596,28 +633,6 @@ class XboxInput:
                 marker_arr.markers.append(m)
             self.marker_pub.publish(marker_arr)
 
-            # marker = Marker()
-            # marker.header.frame_id = "fr3_link0"
-            # marker.ns = ""
-            # marker.header.stamp = rospy.Time.now()
-            # marker.id = 0
-            # marker.type = marker.CYLINDER
-            # marker.action = marker.ADD
-            # marker.color.a = 0.5
-            # marker.color.r = 0.0
-            # marker.color.g = 1.0
-            # marker.color.b = 1.0
-            # marker.scale.x = self.cone_radius
-            # marker.scale.y = self.cone_radius
-            # marker.scale.z = self.cone_height
-            # marker.pose.position.x = self.grasp_midpoint[0]
-            # marker.pose.position.y = self.grasp_midpoint[1]
-            # marker.pose.position.z = self.grasp_midpoint[2]
-            # marker.pose.orientation.x = quat[0]
-            # marker.pose.orientation.y = quat[1]
-            # marker.pose.orientation.z = quat[2]
-            # marker.pose.orientation.w = quat[3]
-            # marker_pub.publish(marker)
 
 
     def pub_cylinder(self, goal_list):
@@ -992,9 +1007,6 @@ class XboxInput:
         fr_r = R.from_euler("xyz", fr_e, degrees=False)
         quat_2 = fr_r.as_quat()
 
-        # self.pub_cylinder(self.og_trans, self.og_quat)
-        # self.check_collide(fcl_ee, self.fr_position, fr_quat, fcl_cone, self.og_trans, self.og_quat)
-
         fcl_ee = self.make_ee_sphere()
         fcl_cone = self.make_fcl_cone()
 
@@ -1028,6 +1040,7 @@ class XboxInput:
         self.on_release()
     # create a new function that deletes all of the current markers from marker array so 
     # they are not visualized in rviz
+
     def delete_markers(self):
         #deletes all of the current markers from marker array so they are not visualized in rviz
         marker_arr = MarkerArray()
@@ -1039,12 +1052,27 @@ class XboxInput:
             m.header.stamp = rospy.Time.now()
             m.action = Marker.DELETE
             marker_arr.markers.append(m)
+            # if idx % 2 == 1:
+            m2 = Marker()
+            m2.id = idx + 1000
+            m2.ns = ""
+            m2.header.frame_id = "fr3_link0"
+            m2.header.stamp = rospy.Time.now()
+            m2.action = Marker.DELETE
+            marker_arr.markers.append(m2)
         self.marker_pub.publish(marker_arr)
 
     def update_grasp_list_visualization(self):
-        marker_arr = MarkerArray() 
+
+        marker_arr = MarkerArray()
         # prune the grasp list so we only inluce elements that have 7 elements
         self.marker_list = [grasp for grasp in self.grasp_loop.grasp_list if len(grasp) == 7]
+        self.temp_list = [grasp for idx, grasp in enumerate(self.marker_list) if idx % 5 == 4]
+        if len(self.marker_list) > 1:
+            self.marker_list = [self.marker_list[1]] + self.temp_list
+        
+        # self.marker_list = [grasp for idx, grasp in enumerate(self.marker_list) if idx % 2 != 1]
+
         colors_ = cm.rainbow(np.linspace(0, 1, len(self.marker_list)))
         for idx, goal in enumerate(self.marker_list):
             m = Marker()
@@ -1059,9 +1087,27 @@ class XboxInput:
             m.pose.position.z = goal[2]
             m.scale = Vector3(0.05, 0.05, 0.05)
             color = colors_[idx]
-            m.color = ColorRGBA(0.5, color[1], 0.5, 0.75)
+            m.color = ColorRGBA(color[0], color[1], color[2], 1.0)
             # chage the color map so we only have a gradient for the red color channel
             marker_arr.markers.append(m)
+            # if idx % 2 == 1:
+                # make a new marker to append to the marker arrray that draws the text number of the grasp
+                # above the marker
+            m2 = Marker()
+            m2.ns = ""
+            m2.header.frame_id = "fr3_link0"
+            m2.id = idx + 1000
+            m2.header.stamp = rospy.Time.now()
+            m2.type = Marker.TEXT_VIEW_FACING
+            m2.action = Marker.ADD
+            m2.pose.position.x = goal[0]
+            m2.pose.position.y = goal[1]
+            m2.pose.position.z = goal[2] + 0.05
+            m2.scale = Vector3(0.05, 0.05, 0.05)
+            m2.text = str(idx+1)
+            m2.color = ColorRGBA(1.0, 1.0, 1.0, 1.0)
+            marker_arr.markers.append(m2)
+
         self.marker_pub.publish(marker_arr)
     
 
@@ -1069,8 +1115,22 @@ class XboxInput:
         # Create a new OverlayText object
         text = OverlayText()
 
-        # Set the text to display the current control state
-        text.text = self.flag
+        if self.num_buckets == 0:
+            text.text = (
+            f"Transfers: {self.num_buckets}\n"
+            f"Current Transfer:\n"
+            # f"Transfer Times: "
+            f"Robot State: {self.flag}\n"
+            f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
+            )
+        else:
+            text.text = (
+                f"Transfers: {self.num_buckets}\n"
+                f"Current Transfer: {self.grasp_loop.curr_transfers}\n"
+                # f"Transfer Times: "
+                f"Robot State: {self.flag}\n"
+                f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
+            )
 
         # Set the font size, color, and other properties as needed
         text.width = 400
@@ -1089,7 +1149,7 @@ class XboxInput:
         text.fg_color.a = 1.0  # Set text color to  white
 
         # Publish the OverlayText message
-        # self.text_pub.publish(text)
+        self.text_pub.publish(text)
 
     def update_mode_and_grasp_visualization(self):
         self.update_grasp_list_visualization()
@@ -1107,7 +1167,7 @@ class XboxInput:
         # self.add_text_to_rvis_current_control_state()
 
         if self.grasp_loop != None:
-                self.update_mode_and_grasp_visualization()
+            self.update_mode_and_grasp_visualization()
 
         if self.flag == "linear":
             self.linear_movement()
@@ -1158,43 +1218,6 @@ class XboxInput:
         self.fr_rotation_matrix = temp_rot_mat
         self.fr_state = True
 
-    def gui_cb(self, msg):
-        text = OverlayText()
-
-        # Construct the text to display
-        display_text = (
-            f"Transfers: {msg.num_transfers}\n"
-            f"Current Transfer: {msg.curr_transfers}\n"
-            f"Transfer Times: {msg.transfer_times}\n"
-            f"Markers: {msg.marker_count // 2}\n"
-            f"Robot State: {msg.robot_mode}\n"
-            f"Dialysis in Series or Parallel: {msg.dialysis_type}\n"
-        )
-        text.text = display_text
-
-        # Set text properties
-        text.width = 400
-        text.height = 100
-        text.left = 10
-        text.top = 10
-        text.text_size = 12
-        text.line_width = 2
-        text.bg_color.r = 0.0
-        text.bg_color.g = 0.0
-        text.bg_color.b = 0.0
-        text.bg_color.a = 0.8  # Background transparency
-        text.fg_color.r = 1.0
-        text.fg_color.g = 1.0
-        text.fg_color.b = 1.0
-        text.fg_color.a = 1.0  # Text color
-
-        # Publish the OverlayText message
-        self.text_pub.publish(text)
-        if msg.go_flag == "Go":
-            self.num_buckets = msg.num_transfers
-            # print("Gohead!!!!!!!!!!!!! \n\n\n\n") 
-            self.gui_flag = "Go"
-
     def contact_cb(self, msg):
         if msg.data > 75:
             self.linear[1] -= self.pos_stride * 0.75
@@ -1203,6 +1226,9 @@ class XboxInput:
     #     self.grasped = msg.grabbed
 
 if __name__ == '__main__':
+    load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
+    with open(load_file, 'w') as file:
+        file.write("")
     flag = rospy.get_param("/xbox_input/flag")
     rospy.init_node('xbox_input')
     xController = XboxInput(flag=flag) 

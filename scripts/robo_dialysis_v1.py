@@ -57,7 +57,7 @@ class GraspLoop:
 
         self.gui_flag = gui_flag
         self.home_pose = home_pose
-        self.load_file = "/home/caleb/robochem_steps/b2_b1.txt"
+        self.load_file = "/home/caleb/robochem_steps/v1_temp_grasps.txt"
         with open(self.load_file, 'r') as file:
             lines = file.readlines()
             float_arrays = [np.array(eval(line)) for line in lines]
@@ -258,7 +258,7 @@ class XboxInput:
         if setting_file_path == '':
             setting_file_path = default_setting_file_path
 
-        self.write_file = "/home/caleb/robochem_steps/b2_b1.txt"
+        self.write_file = "/home/caleb/robochem_steps/v1_temp_grasps.txt"
 
         self.robot = Robot(setting_file_path)
         self.grasped = False
