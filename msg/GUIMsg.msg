@@ -3,3 +3,7 @@ int8 num_transfers
 int8 curr_transfers
 string done_flag
 string test_msg
+string transfer_times
+int32 marker_count
+string dialysis_type
+string robot_mode

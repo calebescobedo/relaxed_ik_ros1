@@ -10,6 +10,7 @@ import transformations as T
 from robot import Robot
 from sensor_msgs.msg import Joy
 import franka_gripper.msg
+from jsk_rviz_plugins.msg import OverlayText  
 from std_msgs.msg import Int8MultiArray, Float64MultiArray,  Float32MultiArray, String, Int32, Bool
 from franka_msgs.msg import FrankaState
 from scipy.spatial.transform import Rotation as R
@@ -270,12 +271,12 @@ class XboxInput:
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
         self.impedance_change_bool_pub = rospy.Publisher('impedance_change_bool', Bool, queue_size=1)
         
-        self.pos_stride = 0.012
-        self.rot_stride = 0.075
-        self.min_pos_stride = 0.012
-        self.min_rot_stride = 0.075
-        self.max_pos_stride = 0.0012
-        self.max_rot_stride = 0.0075
+        self.pos_stride = 0.003
+        self.rot_stride = 0.01875
+        self.min_pos_stride = 0.003
+        self.min_rot_stride = 0.01875
+        self.max_pos_stride = 0.0003
+        self.max_rot_stride = 0.001875
         
         self.p_t = 0.0028
         self.p_r = 0.004
@@ -329,6 +330,7 @@ class XboxInput:
         self.last_grasp_time = time.time()
         self.cone_pub = rospy.Publisher('cone_viz', MarkerArray, queue_size=1)
         self.marker_pub = rospy.Publisher('marker_list', MarkerArray, queue_size=1)
+        self.text_pub = rospy.Publisher("/text_overlay", OverlayText, queue_size=1)
         self.xyz_quat_goal = []
         self.y_check = 0
 
@@ -424,13 +426,8 @@ class XboxInput:
                 self.transfer_first_z = self.franka_pose[2]
                 self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
                 self.transfer_first_quat = self.transfer_all_quat
-                # self.transfer_first_quat = self.franka_pose[3:]
-                # self.quats = R.from_quat([self.transfer_first_quat])
-                # self.eulers = self.quat_temp.as_euler('xyz', degrees=False)
-                # print(f"EULERS: {self.eulers}")
                 first_temp = deepcopy(self.franka_pose)
                 first_temp[3:] = self.transfer_first_quat
-                # first_temp[3] = 1.0
                 first_temp[2] = first_temp[2] + self.transfer_z_offset
                 self.append_state_to_file(first_temp)
                 self.append_grip_action_to_file(self.grasp_loop.release_flag)
@@ -442,11 +439,7 @@ class XboxInput:
             else:
                 temp_cur_pose = deepcopy(self.franka_pose)
                 temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
-                # temp_cur_pose[3] = 1.0
                 temp_cur_pose[3:] = self.transfer_first_quat
-                # self.quat_temp = R.from_quat([self.franka_pose[3:]])
-                # self.eulers_temp = self.quat_temp.as_euler('xyz', degrees=False)
-                # print(f"EULERS: {self.eulers}")
                 self.append_state_to_file(temp_cur_pose)
                 temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
                 self.append_state_to_file(temp_cur_pose)
@@ -808,13 +801,6 @@ class XboxInput:
                 self.made_loop = True
                 self.grasp_loop = GraspLoop(self.flag, self.gui_flag, self.grasp_pose, self.og_x_a)
 
-            # self.marker_list = self.grasp_loop.grasp_list
-            # self.marker_list = [grasp for grasp in self.marker_list if len(grasp) == 7]
-            # self.pub_goal_array(self.marker_list)
-            # print(f"MARKER LIST: {self.marker_list}")
-            # self.marker_pub.publish(self.marker_list)
-
-            # self.pub_closest_point(self.grasp_pose[:3])
             self.update_mode_and_grasp_visualization()
 
 
@@ -841,20 +827,14 @@ class XboxInput:
             self.franka_pose.extend(self.grasp_loop.grasp_dict["x_goal"][3:])
 
             self.hiro_ee_vel_goals_pub.publish(hiro_msg)
-            # print("HIRO data LOOK", hiro_msg.data)
             if self.grasp_loop.next_flag_is_grasp_or_release(self.error_state):
                 self.on_release()
                 hiro_msg.data[:3] = [0,0,0]
 
                 self.hiro_ee_vel_goals_pub.publish(hiro_msg)
-                # print("ZEROOOOOOOOOOOOOOOOOOOO")
-                # print(f"POSE: {self.franka_pose}")
-                # print(f"XYZ:{self.fr_position}, Mat: {self.fr_rotation_matrix}")
                 rospy.sleep(2)
             self.grasp_loop.check_next_state(self.error_state)
 
-            # if self.grasp_loop.check_next_state(self.error_state):
-            #     self.wait_for_new_grasp()
 
     def linear_movement(self):
         if self.start_grasp and self.fr_state:
@@ -1084,35 +1064,33 @@ class XboxInput:
             marker_arr.markers.append(m)
         self.marker_pub.publish(marker_arr)
     
+
     def add_text_to_rvis_current_control_state(self):
-        # create a new marker array that will be used to display the current control state
-        marker_arr = MarkerArray()
-        # create a new marker object
-        m = Marker()
-        # set the frame id of the marker to be the base frame of the robot
-        m.header.frame_id = "fr3_link0"
-        # set the time stamp of the marker to the current time
-        m.header.stamp = rospy.Time.now()
-        # set the id of the marker to 0
-        m.id = 0
-        # set the type of the marker to be text
-        m.type = Marker.TEXT_VIEW_FACING
-        # set the action of the marker to be add
-        m.action = Marker.ADD
-        # set the scale of the marker to be 0.1
-        m.scale = Vector3(0.3, 0.3, 0.3)
-        # set the color of the marker to be red
-        m.color = ColorRGBA(1.0, 1.0, 1.0, 1.0)
-        # set the position of the marker to be the current position of the end effector
-        m.pose.position.x = 0
-        m.pose.position.y = 0
-        m.pose.position.z = 1.0
-        # set the text of the marker to be the current control state
-        m.text = self.flag
-        # append the marker to the marker array
-        marker_arr.markers.append(m)
-        # publish the marker array
-        self.marker_pub.publish(marker_arr)
+        # Create a new OverlayText object
+        text = OverlayText()
+
+        # Set the text to display the current control state
+        text.text = self.flag
+
+        # Set the font size, color, and other properties as needed
+        text.width = 400
+        text.height = 100
+        text.left = 10
+        text.top = 10
+        text.text_size = 12
+        text.line_width = 2
+        text.bg_color.r = 0.0
+        text.bg_color.g = 0.0
+        text.bg_color.b = 0.0
+        text.bg_color.a = 0.8  # Set background transparency
+        text.fg_color.r = 1.0
+        text.fg_color.g = 1.0
+        text.fg_color.b = 1.0
+        text.fg_color.a = 1.0  # Set text color to  white
+
+        # Publish the OverlayText message
+        # self.text_pub.publish(text)
+
     def update_mode_and_grasp_visualization(self):
         self.update_grasp_list_visualization()
         self.add_text_to_rvis_current_control_state()
@@ -1181,6 +1159,37 @@ class XboxInput:
         self.fr_state = True
 
     def gui_cb(self, msg):
+        text = OverlayText()
+
+        # Construct the text to display
+        display_text = (
+            f"Transfers: {msg.num_transfers}\n"
+            f"Current Transfer: {msg.curr_transfers}\n"
+            f"Transfer Times: {msg.transfer_times}\n"
+            f"Markers: {msg.marker_count // 2}\n"
+            f"Robot State: {msg.robot_mode}\n"
+            f"Dialysis in Series or Parallel: {msg.dialysis_type}\n"
+        )
+        text.text = display_text
+
+        # Set text properties
+        text.width = 400
+        text.height = 100
+        text.left = 10
+        text.top = 10
+        text.text_size = 12
+        text.line_width = 2
+        text.bg_color.r = 0.0
+        text.bg_color.g = 0.0
+        text.bg_color.b = 0.0
+        text.bg_color.a = 0.8  # Background transparency
+        text.fg_color.r = 1.0
+        text.fg_color.g = 1.0
+        text.fg_color.b = 1.0
+        text.fg_color.a = 1.0  # Text color
+
+        # Publish the OverlayText message
+        self.text_pub.publish(text)
         if msg.go_flag == "Go":
             self.num_buckets = msg.num_transfers
             # print("Gohead!!!!!!!!!!!!! \n\n\n\n") 
