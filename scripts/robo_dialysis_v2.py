@@ -317,9 +317,9 @@ class XboxInput:
         self.grasp_midpoint = [0,0,0,0,0,0,0]
         self.num_buckets = 0
         self.franka_pose = [0,0,0,0,0,0,0]
-        self.sequentail_str = "sequential"
-        self.parallel_str = "parallel"
-        self.dialysis_type = self.sequentail_str
+        self.series_str = "Series"
+        self.parallel_str = "Parallel"
+        self.dialysis_type = self.series_str
 
         self.grip_cur = 0.08
         self.grip_inc = 0.01
@@ -408,10 +408,10 @@ class XboxInput:
         if r_stick:
             self.r_stick_check += 1
         if self.r_stick_check == 1 and self.fr_state and self.franka_pose[0]:
-            if self.dialysis_type == self.sequentail_str:
+            if self.dialysis_type == self.series_str:
                 self.dialysis_type = self.parallel_str
             else:
-                self.dialysis_type = self.sequentail_str
+                self.dialysis_type = self.series_str
         self.r_stick_check += 1
 
         if not r_stick: self.r_stick_check = 0
@@ -800,6 +800,27 @@ class XboxInput:
         else:
             self.grasp_loop.already_collided = True
             return True
+        
+    def clamp_linear_position(self):
+        z_max = 0.7
+        z_min = 0.02
+        y_max = 0.7
+        y_min = -0.7
+        x_max = 0.6
+        x_min = 0.0
+        print(self.eulers)
+
+        # Set X bounds
+        if self.fr_position[0] > x_max and self.linear[0] > 0: self.linear[0] = 0
+        elif self.fr_position[0] < x_min and self.linear[0] < 0: self.linear[0] = 0
+
+        # Set Y bounds
+        if self.fr_position[1] > y_max and self.linear[1] > 0: self.linear[1] = 0
+        elif self.fr_position[1] < y_min and self.linear[1] < 0: self.linear[1] = 0
+
+        # Set Z bounds
+        if self.fr_position[2] > z_max and self.linear[2] > 0: self.linear[2] = 0
+        elif self.fr_position[2] < z_min and self.linear[2] < 0: self.linear[2] = 0
 
     def wait_for_new_grasp(self):
         self.prev_grasp = self.grasp_pose[0]
@@ -1021,6 +1042,7 @@ class XboxInput:
         self.franka_pose[:3] = self.fr_position
         self.franka_pose[3:] = self.fr_quat
 
+        self.clamp_linear_position()
         self.pub_closest_point(self.nearest_cone_points[1])
         for i in range(self.robot.num_chain):
             twist = Twist()
@@ -1078,6 +1100,7 @@ class XboxInput:
         # self.marker_list = [grasp for idx, grasp in enumerate(self.marker_list) if idx % 2 != 1]
 
         colors_ = cm.rainbow(np.linspace(0, 1, len(self.marker_list)))
+        col_list = cm.rainbow(np.linspace(0, 1, 20))
         for idx, goal in enumerate(self.marker_list):
             m = Marker()
             m.ns = ""
@@ -1090,7 +1113,7 @@ class XboxInput:
             m.pose.position.y = goal[1]
             m.pose.position.z = goal[2]
             m.scale = Vector3(0.05, 0.05, 0.05)
-            color = colors_[idx]
+            color = col_list[idx]
             m.color = ColorRGBA(color[0], color[1], color[2], 1.0)
             # chage the color map so we only have a gradient for the red color channel
             marker_arr.markers.append(m)
@@ -1118,13 +1141,14 @@ class XboxInput:
     def add_text_to_rvis_current_control_state(self):
         # Create a new OverlayText object
         text = OverlayText()
+        robot_dict = {"xbox": "Xbox Control", "list": "Execute saved trajectories", "impedance": "Hand Control"}
 
         if self.num_buckets == 0:
             text.text = (
             f"Transfers: {self.num_buckets}\n"
             f"Current Transfer:\n"
             # f"Transfer Times: "
-            f"Robot State: {self.flag}\n"
+            f"Robot State: {robot_dict[self.flag]}\n"
             f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
             )
         else:
@@ -1132,7 +1156,7 @@ class XboxInput:
                 f"Transfers: {self.num_buckets}\n"
                 f"Current Transfer: {self.grasp_loop.curr_transfers}\n"
                 # f"Transfer Times: "
-                f"Robot State: {self.flag}\n"
+                f"Robot State: {robot_dict[self.flag]}\n"
                 f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
             )
 
@@ -1163,6 +1187,7 @@ class XboxInput:
     def timer_callback(self, event):
         fr_r = R.from_matrix(self.fr_rotation_matrix)
         self.fr_quat = fr_r.as_quat()
+        self.eulers = fr_r.as_euler("xyz", degrees=False)
 
         self.franka_pose[:3] = self.fr_position
         self.franka_pose[3:] = self.fr_quat

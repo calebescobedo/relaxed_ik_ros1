@@ -11,9 +11,11 @@ class hiro_grasp:
         # print("Right before open call")
         self.client = actionlib.SimpleActionClient('/franka_gripper/grasp', franka_gripper.msg.GraspAction)
         # self.open()
+        # self.__outer = 0.1
+        # self.__inner = 0.1
         self.__width = 0.1
-        self.__inner = 0.1
-        self.__outer = 0.1
+        self.__inner = 0.2
+        self.__outer = 0.2
         self.__speed = 0.1
         self.__force = 10
 

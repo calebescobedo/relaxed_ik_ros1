@@ -271,8 +271,8 @@ class XboxInput:
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
         self.impedance_change_bool_pub = rospy.Publisher('impedance_change_bool', Bool, queue_size=1)
         
-        self.pos_stride = 0.012
-        self.rot_stride = 0.075
+        self.pos_stride = 0.006
+        self.rot_stride = 0.0375
 
         # self.min_pos_stride = 0.003
         # self.min_rot_stride = 0.01875
