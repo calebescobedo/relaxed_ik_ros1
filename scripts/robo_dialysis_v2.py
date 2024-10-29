@@ -526,6 +526,7 @@ class XboxInput:
 
     def move_gripper(self):
         self.grasp_loop.set_grasp_width(self.grip_cur)
+        print(f"Grasp width: {dir(self.grasp_loop.__hiro_g)}")
         self.grasp_loop.grasp()
 
 
@@ -808,7 +809,6 @@ class XboxInput:
         y_min = -0.7
         x_max = 0.6
         x_min = 0.0
-        print(self.eulers)
 
         # Set X bounds
         if self.fr_position[0] > x_max and self.linear[0] > 0: self.linear[0] = 0
