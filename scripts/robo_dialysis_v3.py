@@ -384,6 +384,8 @@ class XboxInput:
                 self.linear[1] -= self.pos_stride * self.joy_data.axes[0]
             if abs(self.joy_data.axes[4]) > 0.2:
                 self.linear[2] += self.pos_stride * self.joy_data.axes[4]
+
+            # Caleb - Add back if you want rotation control
             if abs(self.joy_data.axes[6]) > 0.2:
                 self.angular[0] += self.rot_stride * self.joy_data.axes[6]
             if abs(self.joy_data.axes[7]) > 0.2:
@@ -641,7 +643,6 @@ class XboxInput:
 
 
     def pub_cylinder(self, goal_list):
-
         marker_pub = rospy.Publisher('/cylinder_grasp', Marker, queue_size=1)
         marker = Marker()
         marker.header.frame_id = "fr3_link0"
@@ -667,7 +668,6 @@ class XboxInput:
         marker_pub.publish(marker)
 
     def pub_closest_point(self, xyz):
-
         marker_pub = rospy.Publisher('/closest_point', Marker, queue_size=1)
         marker = Marker()
         marker.header.frame_id = "fr3_link0"
@@ -691,7 +691,6 @@ class XboxInput:
         marker.pose.orientation.z = 0.0
         marker.pose.orientation.w = 1.0
         marker_pub.publish(marker)
-
 
     def pub_cone_as_cylinders(self, x_a, x_g, quat):
         top_xyz = x_a[:3]
@@ -731,7 +730,6 @@ class XboxInput:
         cone = fcl.Cone(self.cone_radius, self.cone_height)
         return cone
 
-
     def make_fcl_cylinder(self):
         cylinder = fcl.Cylinder(self.cone_radius, self.cone_height)
         return cylinder
@@ -741,11 +739,6 @@ class XboxInput:
         ee = fcl.Sphere(rad)
         return ee
 
-    def lineseg_dist(self, p, a, b):
-        p = np.array(p)
-        a = np.array(a)
-        b = np.array(b)
-        d = np.divide(b - a, np.linalg.norm(b - a))
 
         s = np.dot(a - p, d)
         t = np.dot(p - b, d)
@@ -1251,9 +1244,6 @@ class XboxInput:
     def contact_cb(self, msg):
         if msg.data > 75:
             self.linear[1] -= self.pos_stride * 0.75
-
-    # def gripper_state_cb(self, msg):
-    #     self.grasped = msg.grabbed
 
 if __name__ == '__main__':
     load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
