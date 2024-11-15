@@ -45,7 +45,7 @@ class GraspLoop:
                  drop_pose = [0.23127, -0.5581, 0.31198, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
                  cone_radius=0.25, cone_height=0.25):
         # self.grasp_list = []
-        self.load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
+        self.load_file = "/home/caleb/robochem_steps/example_transfer.txt"
         self.read_file()
         
         self.grasp_dict = {
@@ -867,6 +867,8 @@ class XboxInput:
 
                 self.hiro_ee_vel_goals_pub.publish(hiro_msg)
                 rospy.sleep(2)
+            print(f"Num buckets: {self.num_buckets}")
+            print(f"Current transfer #: {self.grasp_loop.curr_transfers}")
             self.grasp_loop.check_next_state(self.error_state)
 
 
