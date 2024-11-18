@@ -159,12 +159,12 @@ class TransferManager:
             except Exception as e:
                 self.log_message(f"Error while terminating process: {e}", error=True)
 
-    def get_elapsed_hours(self) -> float:
+    def get_elapsed_time(self) -> float:
         """Get elapsed time in hours since timer start."""
         if self.start_time is None:
             return 0.0
         elapsed = datetime.now() - self.start_time
-        return elapsed.total_seconds() / 3600  # Convert to hours
+        return elapsed.total_seconds()
 
     def run(self):
         """Main execution loop."""
@@ -172,9 +172,6 @@ class TransferManager:
             # Start initial launch file
             self.current_process = self.execute_launch_file()
             self.log_message("Initial launch file started. Waiting for control mode change...")
-
-            # This part needs to be replaced with actual mode monitoring
-            # For now, simulate with a keyboard interrupt to change modes
             try:
                 while True:
                     if self.current_process.poll() is not None:
@@ -196,7 +193,8 @@ class TransferManager:
                 # Wait for first transfer time
                 target_time = self.transfer_times[0]
                 while True:
-                    elapsed = self.get_elapsed_hours()
+                    self.log_message(f"Elapsed time: {self.get_elapsed_time()}")
+                    elapsed = self.get_elapsed_time() / 3600
                     
                     # Check for error-triggered restarts
                     if self.needs_restart:
