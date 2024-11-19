@@ -203,14 +203,14 @@ class GraspLoop:
             return False
 
     def check_next_state(self, error):
-        self.z_force_drop_bound = 0.3
+        self.z_force_drop_bound = 0.05
         ret = False
         if self.is_in_error_bound(error):
             if not self.__pose_order_list:
                 self.__inc_pose_list()
                 if self.repeat_flag and self.repeat_place_flag and self.cur_list_idx == 3:
                     self.__hiro_g.open()
-                    rospy.sleep(2.0)
+                    rospy.sleep(1.0)
                     self.cur_list_idx = 0
                     self.repeat_place_flag = False
                     self.repeat_flag = False
@@ -221,12 +221,12 @@ class GraspLoop:
                         self.curr_transfers += 1
                         self.__hiro_g.set_grasp_width(0.03)
                         self.__hiro_g.grasp()
-                        rospy.sleep(2.0)
+                        rospy.sleep(1.0)
                         self.__inc_pose_list()
                         ret = True
                     elif self.grasp_list[self.cur_list_idx][0] == self.release_flag or (self.repeat_flag and self.cur_list_idx == 3):
                         self.__hiro_g.open()
-                        rospy.sleep(2.0)
+                        rospy.sleep(1.0)
                         self.__inc_pose_list()
                         ret = True
 
@@ -235,7 +235,7 @@ class GraspLoop:
                     next_idx = (self.cur_list_idx + 1 ) % (len(self.grasp_list))
                     if self.grasp_list[next_idx][0] == self.release_flag:
                         self.__hiro_g.open()
-                        rospy.sleep(2.0)
+                        rospy.sleep(1.0)
                         ret = True
                         self.__inc_pose_list()                    
                         self.__inc_pose_list()  
@@ -246,7 +246,7 @@ class GraspLoop:
         elif self.__pose_order_list[self.__cur_idx] == "grasp":
             ret = self.inc_state()
             self.__hiro_g.grasp()
-            rospy.sleep(2.0)
+            rospy.sleep(1.0)
         return ret
     
     def inc_state(self):
@@ -275,7 +275,7 @@ class XboxInput:
         if setting_file_path == '':
             setting_file_path = default_setting_file_path
 
-        self.write_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
+        self.write_file = "/home/caleb/robochem_steps/example_transfer.txt"
 
         self.robot = Robot(setting_file_path)
         self.grasped = False
@@ -295,7 +295,8 @@ class XboxInput:
         self.max_pos_stride = 0.0003
         self.max_rot_stride = 0.001875
         
-        self.p_t = 0.0028
+        # self.p_t = 0.0028
+        self.p_t = 0.006
         self.p_r = 0.004
         self.rot_error = [0.0, 0.0, 0.0]
 
@@ -1145,7 +1146,7 @@ class XboxInput:
             f"Current Transfer:\n"
             # f"Transfer Times: "
             f"Robot State: {robot_dict[self.flag]}\n"
-            f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
+            # f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
             )
         else:
             text.text = (
@@ -1153,7 +1154,7 @@ class XboxInput:
                 f"Current Transfer: {self.grasp_loop.curr_transfers}\n"
                 # f"Transfer Times: "
                 f"Robot State: {robot_dict[self.flag]}\n"
-                f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
+                # f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
             )
 
         # Set the font size, color, and other properties as needed
@@ -1188,9 +1189,6 @@ class XboxInput:
         self.franka_pose[:3] = self.fr_position
         self.franka_pose[3:] = self.fr_quat
 
-        # self.update_grasp_list_visualization()
-        # self.add_text_to_rvis_current_control_state()
-
         if self.grasp_loop != None:
             self.update_mode_and_grasp_visualization()
 
@@ -1202,14 +1200,11 @@ class XboxInput:
             self.l_shaped_movement()
         elif self.flag == "cone":
             self.cone()
-        # elif self.flag == "list" and self.gui_flag == "Go":
         elif self.flag == "list":
             self.move_through_list()
         elif self.flag == "impedance":
             self.update_mode_and_grasp_visualization()
             self.grasp_pose = self.franka_pose
-
-        
 
     def subscriber_callback(self, data):
         zero = [0.0, 0.0, 0.0]
@@ -1249,8 +1244,8 @@ class XboxInput:
 
 if __name__ == '__main__':
     load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
-    with open(load_file, 'w') as file:
-        file.write("")
+    # with open(load_file, 'w') as file:
+    #     file.write("")
     flag = rospy.get_param("/xbox_input/flag")
     rospy.init_node('xbox_input')
     xController = XboxInput(flag=flag) 

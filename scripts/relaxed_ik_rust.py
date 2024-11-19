@@ -71,14 +71,18 @@ class RelaxedIK:
         self.js_msg = JointState()
         self.js_msg.name = self.robot.articulated_joint_names
         self.js_msg.position = []
+        rospy.Subscriber("/joint_states", JointState, self.get_starting_state)
+        self.have_starting_state = False
 
-        if 'starting_config' not in settings:
-            settings['starting_config'] = [0.0] * len(self.js_msg.name)
-        else:
-            assert len(settings['starting_config']) == len(self.js_msg.name), \
-                    "Starting config length does not match the number of joints"
-            for i in range(len(self.js_msg.name)):
-                self.js_msg.position.append( settings['starting_config'][i] )
+        while not self.have_starting_state:
+            rospy.sleep(0.1)
+        # if 'starting_config' not in settings:
+        #     settings['starting_config'] = [0.0] * len(self.js_msg.name)
+        # else:
+        #     assert len(settings['starting_config']) == len(self.js_msg.name), \
+        #             "Starting config length does not match the number of joints"
+        #     for i in range(len(self.js_msg.name)):
+        #         self.js_msg.position.append( settings['starting_config'][i] )
         
         # Subscribers
         rospy.Subscriber('/relaxed_ik/ee_pose_goals', EEPoseGoals, self.pose_goals_cb)
@@ -87,6 +91,13 @@ class RelaxedIK:
         rospy.Subscriber('/relaxed_ik/reset', JointState, self.reset_cb)
 
         print("\nSolver RelaxedIK initialized!\n")
+    def get_starting_state(self, msg):
+        self.js_msg.position = msg.position
+        if not self.have_starting_state:
+            print(f"**********Starting state: {self.js_msg.position}")
+        self.have_starting_state = True
+        # self.js_msg.header.stamp = rospy.Time.now()
+        # self.angles_pub.publish(self.js_msg)
 
     def get_ee_pose(self):
         ee_poses = self.relaxed_ik.get_ee_positions()

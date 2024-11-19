@@ -4,9 +4,10 @@ import time
 import signal
 import sys
 import re
+import os
 from typing import List
 from datetime import datetime
-from threading import Thread
+from threading import Thread, Event
 
 class TransferManager:
     def __init__(self, transfer_times: List[float]):
@@ -23,18 +24,80 @@ class TransferManager:
         self.max_retries = 3
         self.retry_delay = 3  # seconds
         self.start_time = None
-        self.first_launch = True  # Track if this is the first launch
         self.error_patterns = [
-            # Motion finished but still moving error
             r"Motion finished commanded, but the robot is still moving!.*velocity_limits_violation.*velocity_discontinuity.*acceleration_discontinuity",
-            # Control command success rate errors
             r"control_command_success_rate: 0\.95",
             r"control_command_success_rate: 0\.78",
-            # Reflex error
             r"libfranka: Move command aborted: motion aborted by reflex!.*communication_constraints_violation"
         ]
         self.needs_restart = False
         self.restart_lock = False
+        self.current_mode = 'xbox'
+        self.exit_flag = Event()  # For clean script termination
+        self.transition_flag = Event()  # For xbox -> list mode transition
+        self.setup_signal_handlers()
+
+    def setup_signal_handlers(self):
+        """Setup signal handlers for graceful shutdown."""
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def signal_handler(self, signum, frame):
+        """
+        Handle termination signals.
+        SIGINT (Ctrl+C) triggers transition, SIGTERM triggers exit
+        """
+        if signum == signal.SIGINT and self.current_mode == 'xbox':
+            self.log_message("Ctrl+C received, transitioning to timer mode...")
+            self.transition_flag.set()
+        elif signum == signal.SIGTERM or self.current_mode == 'list':
+            self.log_message(f"Termination signal received, cleaning up...")
+            self.exit_flag.set()
+            self.cleanup()
+            sys.exit(0)
+
+    def cleanup(self):
+        """Perform thorough cleanup of processes."""
+        try:
+            if self.current_process:
+                self.log_message("Cleaning up current process...")
+                
+                # Kill the process group
+                try:
+                    pgid = os.getpgid(self.current_process.pid)
+                    os.killpg(pgid, signal.SIGTERM)
+                    self.log_message(f"Sent SIGTERM to process group {pgid}")
+                except ProcessLookupError:
+                    pass
+                except Exception as e:
+                    self.log_message(f"Error killing process group: {e}", error=True)
+
+                # Handle main process
+                try:
+                    self.current_process.terminate()
+                    try:
+                        self.current_process.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        self.log_message("Process not responding, forcing kill...", error=True)
+                        self.current_process.kill()
+                        self.current_process.wait(timeout=2)
+                except (ProcessLookupError, subprocess.TimeoutExpired):
+                    try:
+                        os.kill(self.current_process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                
+                self.current_process = None
+
+            # Cleanup any remaining processes
+            try:
+                subprocess.run(['pkill', '-f', f'roslaunch.*{self.launch_file}'], 
+                             timeout=5)
+            except Exception as e:
+                self.log_message(f"Error during final cleanup: {e}", error=True)
+
+        except Exception as e:
+            self.log_message(f"Error during cleanup: {e}", error=True)
 
     def log_message(self, message: str, error: bool = False):
         """Log a message with timestamp."""
@@ -52,10 +115,11 @@ class TransferManager:
     def stream_output(self, stream, prefix=''):
         """Stream output from a pipe to stdout."""
         for line in iter(stream.readline, b''):
+            if self.exit_flag.is_set():
+                break
             decoded_line = line.decode().rstrip()
             print(f"{prefix}{decoded_line}")
             
-            # Check for error patterns in stderr
             if prefix == 'ERROR: ' and self.check_error_patterns(decoded_line):
                 error_msg = f"Detected critical error: {decoded_line}"
                 self.log_message(error_msg, error=True)
@@ -68,18 +132,10 @@ class TransferManager:
             try:
                 self.restart_lock = True
                 self.log_message("Initiating emergency restart sequence", error=True)
-                
-                # Kill current process
-                self.kill_current_process()
-                
-                # Wait briefly before restart
+                self.cleanup()
                 time.sleep(2)
-                
-                # Start new process
                 self.current_process = self.execute_launch_file()
-                
                 self.log_message("Emergency restart completed successfully")
-                
             except Exception as e:
                 self.log_message(f"Error during emergency restart: {e}", error=True)
             finally:
@@ -91,25 +147,18 @@ class TransferManager:
         retries = 0
         while retries < self.max_retries:
             try:
-                # Prepare launch command based on whether this is the first launch
-                # if self.first_launch:
-                #     cmd = ['roslaunch', self.package_name, self.launch_file]
-                #     launch_type = "initial"
-                # else:
-                cmd = ['roslaunch', self.package_name, self.launch_file, 'flag:=list']
-                launch_type = "subsequent"
-
-                self.log_message(f"Starting {launch_type} launch with command: {' '.join(cmd)}")
+                cmd = ['roslaunch', self.package_name, self.launch_file, f'flag:={self.current_mode}']
+                self.log_message(f"Starting launch with mode '{self.current_mode}' and command: {' '.join(cmd)}")
                 
                 process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     bufsize=1,
-                    universal_newlines=False
+                    universal_newlines=False,
+                    preexec_fn=os.setsid
                 )
                 
-                # Create threads to handle stdout and stderr streams
                 stdout_thread = Thread(target=self.stream_output, 
                                      args=(process.stdout,),
                                      daemon=True)
@@ -117,16 +166,12 @@ class TransferManager:
                                      args=(process.stderr, 'ERROR: '),
                                      daemon=True)
                 
-                # Start the output streaming threads
                 stdout_thread.start()
                 stderr_thread.start()
                 
-                # Check if process started successfully
-                if process.poll() is None:  # Process is running
-                    if self.first_launch:
-                        self.first_launch = False  # Update flag after successful first launch
+                if process.poll() is None:
                     return process
-                else:  # Process failed to start
+                else:
                     raise subprocess.SubprocessError("Process failed to start")
                 
             except (subprocess.SubprocessError, OSError) as e:
@@ -143,92 +188,83 @@ class TransferManager:
         self.log_message("Failed to start process after all retry attempts", error=True)
         sys.exit(1)
 
-    def kill_current_process(self):
-        """Safely terminate the current process if it exists."""
-        if self.current_process:
-            try:
-                self.current_process.terminate()
-                self.log_message("Waiting for process to terminate...")
-                try:
-                    self.current_process.wait(timeout=5)  # Wait up to 5 seconds for graceful termination
-                except subprocess.TimeoutExpired:
-                    self.log_message("Process did not terminate gracefully, forcing kill...", error=True)
-                    self.current_process.kill()  # Force kill if graceful termination fails
-                self.log_message("Process terminated")
-                self.current_process = None
-            except Exception as e:
-                self.log_message(f"Error while terminating process: {e}", error=True)
-
     def get_elapsed_time(self) -> float:
         """Get elapsed time in hours since timer start."""
         if self.start_time is None:
             return 0.0
         elapsed = datetime.now() - self.start_time
-        return elapsed.total_seconds()
+        return elapsed.total_seconds() / 3600
 
     def run(self):
         """Main execution loop."""
         try:
-            # Start initial launch file
-            self.current_process = self.execute_launch_file()
-            self.log_message("Initial launch file started. Waiting for control mode change...")
-            try:
-                while True:
-                    if self.current_process.poll() is not None:
-                        self.log_message("Process died unexpectedly, restarting...", error=True)
-                        self.current_process = self.execute_launch_file()
+            while not self.exit_flag.is_set():
+                try:
+                    # Start with xbox mode
+                    self.current_mode = 'xbox'
+                    self.log_message("Starting initial launch with xbox mode...")
+                    self.current_process = self.execute_launch_file()
                     
-                    # Check for error-triggered restarts
-                    if self.needs_restart:
-                        self.handle_process_restart()
-                    
-                    time.sleep(0.1)  # Small sleep to prevent CPU overuse
+                    # Wait for xbox mode to be terminated or fail
+                    while not self.transition_flag.is_set() and not self.exit_flag.is_set():
+                        if self.current_process.poll() is not None:
+                            self.log_message("Xbox mode process ended unexpectedly")
+                            break
                         
-            except KeyboardInterrupt:
-                self.log_message("Control mode change detected (simulated)")
-                self.kill_current_process()
-                self.start_time = datetime.now()
-                self.log_message("Timer started")
-
-                # Wait for first transfer time
-                target_time = self.transfer_times[0]
-                while True:
-                    self.log_message(f"Elapsed time: {self.get_elapsed_time()}")
-                    elapsed = self.get_elapsed_time() / 3600
+                        if self.needs_restart:
+                            self.handle_process_restart()
+                        
+                        time.sleep(0.1)
                     
-                    # Check for error-triggered restarts
-                    if self.needs_restart:
-                        self.handle_process_restart()
+                    # Clean up xbox mode process
+                    self.cleanup()
                     
-                    if elapsed >= target_time:
-                        self.log_message(f"Transfer time reached: {target_time} hours")
-                        self.current_process = self.execute_launch_file()
+                    if self.exit_flag.is_set():
                         break
-                    time.sleep(0.1)  # Check frequently but don't overload CPU
-
-                # Keep the final process running until interrupted
-                while True:
-                    if self.current_process.poll() is not None:
-                        self.log_message("Process died unexpectedly, restarting...", error=True)
-                        self.current_process = self.execute_launch_file()
                     
-                    # Check for error-triggered restarts
-                    if self.needs_restart:
-                        self.handle_process_restart()
-                    
-                    time.sleep(0.1)
+                    # Switch to list mode and start timer
+                    self.current_mode = 'list'
+                    self.start_time = datetime.now()
+                    self.log_message("Switching to list mode and starting timer...")
+                    self.transition_flag.clear()
 
-        except KeyboardInterrupt:
-            self.log_message("Interrupt received, cleaning up...")
-            self.kill_current_process()
-            sys.exit(0)
+                    # Wait for transfer time
+                    target_time = self.transfer_times[0]
+                    while not self.exit_flag.is_set():
+                        elapsed_hours = self.get_elapsed_time()
+                        
+                        if self.needs_restart:
+                            self.handle_process_restart()
+                        
+                        if elapsed_hours >= target_time:
+                            self.log_message(f"Transfer time reached: {target_time} hours")
+                            self.current_process = self.execute_launch_file()
+                            break
+                        time.sleep(0.1)
+
+                    # Keep the final process running until interrupted
+                    while not self.exit_flag.is_set():
+                        if self.current_process.poll() is not None:
+                            self.log_message("Process died unexpectedly, restarting...", error=True)
+                            self.current_process = self.execute_launch_file()
+                        
+                        if self.needs_restart:
+                            self.handle_process_restart()
+                        
+                        time.sleep(0.1)
+
+                except KeyboardInterrupt:
+                    if self.current_mode == 'xbox':
+                        self.transition_flag.set()
+                    else:
+                        self.exit_flag.set()
+
         except Exception as e:
             self.log_message(f"Unexpected error: {e}", error=True)
-            self.kill_current_process()
+            self.cleanup()
             sys.exit(1)
 
 def main():
-    # Example usage - modify these values as needed
     transfer_times = [1.0]  # Time in hours when launch file should respawn
     
     try:
