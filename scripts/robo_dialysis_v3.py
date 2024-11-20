@@ -359,7 +359,11 @@ class XboxInput:
 
         self.eulers = [0, 0, 0]
         self.marker_list = []
-
+        self.time_until_next = "00:00:00"
+        self.robot_mode = "xbox"
+        
+        # Add subscriber for timer updates
+        rospy.Subscriber("/gui_msg", GUIMsg, self.gui_msg_callback)
         rospy.Subscriber("/mid_grasp_point", Float32MultiArray, self.grasp_midpoint_callback)
         rospy.Subscriber("joy", Joy, self.joy_cb)
         rospy.Subscriber("final_grasp", Float32MultiArray, self.subscriber_callback)
@@ -400,10 +404,10 @@ class XboxInput:
         b = data.buttons[1]
         x = data.buttons[2] 
         y = data.buttons[3]
-        rt_trigger = data.axes[5]
+        # rt_trigger = data.axes[5]
 
-        self.pos_stride = (rt_trigger + 1) / 2 * (self.max_pos_stride - self.min_pos_stride) + self.min_pos_stride
-        self.rot_stride = (rt_trigger + 1) / 2 * (self.max_rot_stride - self.min_rot_stride) + self.min_rot_stride
+        # self.pos_stride = (rt_trigger + 1) / 2 * (self.max_pos_stride - self.min_pos_stride) + self.min_pos_stride
+        # self.rot_stride = (rt_trigger + 1) / 2 * (self.max_rot_stride - self.min_rot_stride) + self.min_rot_stride
 
         back_button = data.buttons[6]
         start_button = data.buttons[7]
@@ -1136,28 +1140,37 @@ class XboxInput:
     
 
     def add_text_to_rvis_current_control_state(self):
-        # Create a new OverlayText object
+        """Update the RViz text overlay with current state and timer."""
         text = OverlayText()
-        robot_dict = {"xbox": "Xbox Control", "list": "Execute saved trajectories", "impedance": "Hand Control"}
+        robot_dict = {
+            "xbox": "Xbox Control", 
+            "list": "Execute saved trajectories", 
+            "impedance": "Hand Control"
+        }
 
         if self.num_buckets == 0:
             text.text = (
-            f"Transfers: {self.num_buckets}\n"
-            f"Current Transfer:\n"
-            # f"Transfer Times: "
-            f"Robot State: {robot_dict[self.flag]}\n"
-            # f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
+                f"Transfers: {self.num_buckets}\n"
+                f"Current Transfer:\n"
+                f"Robot State: {robot_dict[self.flag]}\n"
             )
         else:
-            text.text = (
-                f"Transfers: {self.num_buckets}\n"
-                f"Current Transfer: {self.grasp_loop.curr_transfers}\n"
-                # f"Transfer Times: "
-                f"Robot State: {robot_dict[self.flag]}\n"
-                # f"Dialysis in Series or Parallel: {self.dialysis_type}\n"
-            )
+            # Add timer display if in list mode
+            if self.flag == "list":
+                text.text = (
+                    f"Transfers: {self.num_buckets}\n"
+                    f"Current Transfer: {self.grasp_loop.curr_transfers}\n"
+                    f"Time until next transfer: {self.time_until_next}\n"
+                    f"Robot State: {robot_dict[self.flag]}\n"
+                )
+            else:
+                text.text = (
+                    f"Transfers: {self.num_buckets}\n"
+                    f"Current Transfer: {self.grasp_loop.curr_transfers}\n"
+                    f"Robot State: {robot_dict[self.flag]}\n"
+                )
 
-        # Set the font size, color, and other properties as needed
+        # Set text properties
         text.width = 400
         text.height = 100
         text.left = 10
@@ -1167,18 +1180,24 @@ class XboxInput:
         text.bg_color.r = 0.0
         text.bg_color.g = 0.0
         text.bg_color.b = 0.0
-        text.bg_color.a = 0.8  # Set background transparency
+        text.bg_color.a = 0.8
         text.fg_color.r = 1.0
         text.fg_color.g = 1.0
         text.fg_color.b = 1.0
-        text.fg_color.a = 1.0  # Set text color to  white
+        text.fg_color.a = 1.0
 
-        # Publish the OverlayText message
         self.text_pub.publish(text)
 
     def update_mode_and_grasp_visualization(self):
         self.update_grasp_list_visualization()
         self.add_text_to_rvis_current_control_state()
+
+    def gui_msg_callback(self, msg):
+        """Handle incoming GUI messages with timer updates."""
+        # if hasattr(msg, 'transfer_times'):
+        self.time_until_next = msg.transfer_times
+        # if hasattr(msg, 'robot_mode'):
+        self.robot_mode = msg.robot_mode
 
 
     def timer_callback(self, event):

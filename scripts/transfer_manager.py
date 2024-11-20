@@ -8,6 +8,9 @@ import os
 from typing import List
 from datetime import datetime
 from threading import Thread, Event
+import rospy
+from relaxed_ik_ros1.msg import GUIMsg
+from jsk_rviz_plugins.msg import OverlayText
 
 class TransferManager:
     def __init__(self, transfer_times: List[float]):
@@ -33,9 +36,29 @@ class TransferManager:
         self.needs_restart = False
         self.restart_lock = False
         self.current_mode = 'xbox'
-        self.exit_flag = Event()  # For clean script termination
-        self.transition_flag = Event()  # For xbox -> list mode transition
+        self.exit_flag = Event()
+        self.transition_flag = Event()
         self.setup_signal_handlers()
+        
+        # Initialize ROS node
+        rospy.init_node('transfer_manager', anonymous=True)
+        self.gui_pub = rospy.Publisher('/gui_msg', GUIMsg, queue_size=1)
+        self.text_pub = rospy.Publisher("/text_overlay", OverlayText, queue_size=1)
+        
+    def format_time_remaining(self, hours_remaining: float) -> str:
+        """Convert hours to HH:MM:SS format."""
+        total_seconds = int(hours_remaining * 3600)
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    def publish_timer_update(self, hours_remaining: float):
+        """Publish timer update to GUI."""
+        msg = GUIMsg()
+        msg.transfer_times = self.format_time_remaining(hours_remaining)
+        msg.robot_mode = self.current_mode
+        self.gui_pub.publish(msg)
 
     def setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown."""
@@ -214,6 +237,12 @@ class TransferManager:
                         if self.needs_restart:
                             self.handle_process_restart()
                         
+                        # Publish mode status
+                        msg = GUIMsg()
+                        msg.robot_mode = self.current_mode
+                        # msg.transfer_times = "00:00:00"
+                        self.gui_pub.publish(msg)
+                        
                         time.sleep(0.1)
                     
                     # Clean up xbox mode process
@@ -226,12 +255,23 @@ class TransferManager:
                     self.current_mode = 'list'
                     self.start_time = datetime.now()
                     self.log_message("Switching to list mode and starting timer...")
+                    
+                    # Immediately start the launch file in list mode
+                    self.current_process = self.execute_launch_file()
+                    self.log_message("Launched list mode process")
                     self.transition_flag.clear()
 
-                    # Wait for transfer time
+                    # Wait for transfer time while updating display
                     target_time = self.transfer_times[0]
                     while not self.exit_flag.is_set():
                         elapsed_hours = self.get_elapsed_time()
+                        remaining_hours = target_time - elapsed_hours
+                        
+                        # Publish timer update
+                        msg = GUIMsg()
+                        msg.robot_mode = self.current_mode
+                        msg.transfer_times = self.format_time_remaining(remaining_hours)
+                        self.gui_pub.publish(msg)
                         
                         if self.needs_restart:
                             self.handle_process_restart()
@@ -240,7 +280,8 @@ class TransferManager:
                             self.log_message(f"Transfer time reached: {target_time} hours")
                             self.current_process = self.execute_launch_file()
                             break
-                        time.sleep(0.1)
+                            
+                        time.sleep(0.1)  # Update display every 100ms
 
                     # Keep the final process running until interrupted
                     while not self.exit_flag.is_set():
@@ -250,6 +291,12 @@ class TransferManager:
                         
                         if self.needs_restart:
                             self.handle_process_restart()
+                        
+                        # Continue publishing timer status
+                        msg = GUIMsg()
+                        msg.robot_mode = self.current_mode
+                        msg.transfer_times = "00:00:00"  # Reset timer after transfer
+                        self.gui_pub.publish(msg)
                         
                         time.sleep(0.1)
 
@@ -264,10 +311,40 @@ class TransferManager:
             self.cleanup()
             sys.exit(1)
 
-def main():
-    transfer_times = [1.0]  # Time in hours when launch file should respawn
-    
+    def gui_callback(self, msg):
+        """Handle messages from the GUI."""
+        try:
+            if msg.go_flag == "start":
+                self.log_message("Received start command from GUI")
+                
+                # Parse transfer times from message
+                if msg.transfer_times:
+                    try:
+                        self.transfer_times = [float(t) for t in msg.transfer_times.split(',')]
+                        self.log_message(f"Updated transfer times: {self.transfer_times}")
+                    except ValueError as e:
+                        self.log_message(f"Error parsing transfer times: {e}", error=True)
+                
+                # Set transition flag to start transfers
+                self.transition_flag.set()
+        except Exception as e:
+            self.log_message(f"Error in GUI callback: {e}", error=True)
+
+def read_transfer_times(filename: str) -> List[float]:
+    """Read transfer times from file, converting hours to floats."""
     try:
+        with open(filename, 'r') as f:
+            return [float(line.strip()) for line in f if line.strip()]
+    except FileNotFoundError:
+        print(f"Transfer times file '{filename}' not found. Using default of 1 hour.")
+        return [1]
+    except ValueError as e:
+        print(f"Error parsing transfer times: {e}. Using default of 1.0 hour.")
+        return [1]
+
+def main():
+    try:
+        transfer_times = read_transfer_times('/home/caleb/robochem_steps/transfer_times.txt')
         manager = TransferManager(transfer_times)
         manager.run()
     except Exception as e:

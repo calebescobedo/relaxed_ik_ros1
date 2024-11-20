@@ -21,6 +21,6 @@
         <arg name="time" value="1" />
         <arg name="pkg" value="relaxed_ik_ros1" />
         <arg name="file" value="demo.launch" />
-        <arg name="node_name" value="timed_roslaunch" /> <!-- This is optional argument -->
+        <arg name="node_name" value="timed_roslaunch" />
       </include>
 </launch>
