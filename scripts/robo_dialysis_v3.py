@@ -29,6 +29,7 @@ from matplotlib import cm
 from geometry_msgs.msg import Vector3, Point
 from std_msgs.msg import ColorRGBA
 import time
+from sensor_msgs.msg import JointState
 
 def run_once(f):
     def wrapper(*args, **kwargs):
@@ -287,17 +288,21 @@ class XboxInput:
         self.ee_vel_goals_pub = rospy.Publisher('relaxed_ik/ee_vel_goals', EEVelGoals, queue_size=1)
         self.hiro_ee_vel_goals_pub = rospy.Publisher('relaxed_ik/hiro_ee_vel_goals', Float64MultiArray, queue_size=1)
         self.impedance_change_bool_pub = rospy.Publisher('impedance_change_bool', Bool, queue_size=1)
+
+        # create a ros publisher to the topic "/relaxed_ik/joint_angle_solutions" with type sensor messages joint state
+        self.joint_angle_solutions_pub = rospy.Publisher('/relaxed_ik/reset', JointState, queue_size=1)
         
         self.pos_stride = 0.003
-        self.rot_stride = 0.01875
+        # self.rot_stride = 0.01875
+        self.rot_stride = 0.009
         self.min_pos_stride = 0.003
         self.min_rot_stride = 0.01875
         self.max_pos_stride = 0.0003
         self.max_rot_stride = 0.001875
         
         # self.p_t = 0.0028
-        self.p_t = 0.006
-        self.p_r = 0.004
+        self.p_t = 0.005
+        self.p_r = 0.003
         self.rot_error = [0.0, 0.0, 0.0]
 
         self.z_offset = 0.0
@@ -361,6 +366,7 @@ class XboxInput:
         self.marker_list = []
         self.time_until_next = "00:00:00"
         self.robot_mode = "xbox"
+        self.franka_joint_states = None
         
         # Add subscriber for timer updates
         rospy.Subscriber("/gui_msg", GUIMsg, self.gui_msg_callback)
@@ -370,9 +376,15 @@ class XboxInput:
         rospy.Subscriber("/franka_state_controller/franka_states", FrankaState, self.fr_state_cb)
         rospy.Subscriber("/estimated_approach_frame", Float32MultiArray, self.l_shaped_callback)
         rospy.Subscriber("/contact", Int32, self.contact_cb)
+        # create a subscriber to the joint states topic
+        rospy.Subscriber("/joint_states", JointState, self.joint_state_cb)
+
         rospy.sleep(1.0)
         rospy.Timer(rospy.Duration(0.01), self.timer_callback)
-    
+
+    def joint_state_cb(self, data):
+        self.franka_joint_states = data
+
     def set_to_hand_control(self):
         self.flag = "impedance"
         print(f"IMPEDING: {self.flag}")
@@ -800,9 +812,36 @@ class XboxInput:
             self.grasp_loop.already_collided = True
             return True
         
+    def clamp_rotation(self):
+        print(self.eulers, "EULERS")
+        print(self.angular, "ANGULAR")
+
+        if abs(self.eulers[0]) < 1.4: 
+            if self.eulers[0] < 0 and self.angular[0] < 0: self.angular[0] = 0
+            elif self.eulers[0] > 0 and self.angular[0] > 0: self.angular[0] = 0
+        
+        if self.eulers[1] < -0.3: 
+            if self.eulers[1] < 0 and self.angular[1] < 0: self.angular[1] = 0
+        if self.eulers[1] > 0.3: 
+            if self.eulers[1] > 0 and self.angular[1] > 0: self.angular[1] = 0
+        # same thing as above for 2
+        if abs(self.eulers[2]) > 1.57:
+            if self.eulers[2] < 0 and self.angular[2] < 0: self.angular[2] = 0
+            elif self.eulers[2] > 0 and self.angular[2] > 0: self.angular[2] = 0
+
+
+        # if ro[0] > 0.5: self.angular[0] = 0
+        # elif self.eulers[0] < -0.5: self.angular[0] = 0
+
+        # if self.eulers[1] > 0.5: self.angular[1] = 0
+        # elif self.eulers[1] < -0.5: self.angular[1] = 0
+
+        # if self.eulers[2] > 0.5: self.angular[2] = 0
+        # elif self.eulers[2] < -0.5: self.angular[2] = 0
+
     def clamp_linear_position(self):
         z_max = 0.7
-        z_min = 0.02
+        z_min = 0.2
         y_max = 0.7
         y_min = -0.7
         x_max = 0.6
@@ -1044,6 +1083,7 @@ class XboxInput:
         self.franka_pose[3:] = self.fr_quat
 
         self.clamp_linear_position()
+        self.clamp_rotation()
         self.pub_closest_point(self.nearest_cone_points[1])
         for i in range(self.robot.num_chain):
             twist = Twist()
@@ -1222,6 +1262,10 @@ class XboxInput:
         elif self.flag == "list":
             self.move_through_list()
         elif self.flag == "impedance":
+            # publish the current robot state joint angles through joint_angle_solutions_pub
+            # print("update franka joint states")
+            self.joint_angle_solutions_pub.publish(self.franka_joint_states)
+            # self.on_release()
             self.update_mode_and_grasp_visualization()
             self.grasp_pose = self.franka_pose
 

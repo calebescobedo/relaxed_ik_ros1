@@ -146,11 +146,13 @@ class RelaxedIK:
         return res
 
     def reset_cb(self, msg):
-        n = len(msg.positions)
+        # print("Resetting the solver******************")
+        n = 7
+        # print("len(msg.position): ", n)
         x = (ctypes.c_double * n)()
         for i in range(n):
-            x[i] = msg.positions[i]
-        self.relaxed_ik.reset(x, n)
+            x[i] = msg.position[i]
+        self.relaxed_ik.reset(x)
 
     def pose_goals_cb(self, msg):
         positions = []
@@ -183,6 +185,7 @@ class RelaxedIK:
         self.angles_pub.publish(self.js_msg)
 
     def pose_vels_cb(self, msg):
+        print("Received pose velocities")
         linear_vels = []
         angular_vels = []
         tolerances = []
