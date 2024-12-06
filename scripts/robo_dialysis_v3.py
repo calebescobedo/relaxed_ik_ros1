@@ -29,6 +29,7 @@ from matplotlib import cm
 from geometry_msgs.msg import Vector3, Point
 from std_msgs.msg import ColorRGBA
 import time
+from pynput import keyboard
 
 def run_once(f):
     def wrapper(*args, **kwargs):
@@ -144,6 +145,8 @@ class GraspLoop:
             self.grasp_pose = self.grasp_dict["x_goal"]
             return None
         elif self.flag == "xbox":
+            self.grasp_dict["x_goal"] = self.grasp_dict["x_g"]
+        elif self.flag == "keyboard":
             self.grasp_dict["x_goal"] = self.grasp_dict["x_g"]
 
     def read_file(self):
@@ -367,12 +370,160 @@ class XboxInput:
         rospy.Subscriber("/contact", Int32, self.contact_cb)
         rospy.sleep(1.0)
         rospy.Timer(rospy.Duration(0.01), self.timer_callback)
+
+        self.keyboard_listener = keyboard.Listener(
+            on_press = self.update_keyboard_inputs,
+            on_release = self.on_release)
+        self.keyboard_listener.start()
     
     def set_to_hand_control(self):
         self.flag = "impedance"
         print(f"IMPEDING: {self.flag}")
         self.made_loop = False
         self.impedance_change_bool_pub.publish(True)
+
+    def update_keyboard_inputs(self, key):
+        if self.flag == "keyboard":
+            if key.char == 'w':
+                self.linear[0] += self.pos_stride
+            elif key.char == 'x':
+                self.linear[0] -= self.pos_stride
+            elif key.char == 'a':
+                self.linear[1] += self.pos_stride
+            elif key.char == 'd':
+                self.linear[1] -= self.pos_stride
+            elif key.char == 'q':
+                self.linear[2] += self.pos_stride
+            elif key.char == 'z':
+                self.linear[2] -= self.pos_stride
+            elif key.char == '1':
+                self.angular[0] += self.rot_stride
+            elif key.char == '2':
+                self.angular[0] -= self.rot_stride
+            elif key.char == '3':
+                self.angular[1] += self.rot_stride
+            elif key.char == '4':
+                self.angular[1] -= self.rot_stride
+            elif key.char == '5':
+                self.angular[2] += self.rot_stride
+            elif key.char == '6':
+                self.angular[2] -= self.rot_stride
+
+        # a = data.buttons[0]
+        # b = data.buttons[1]
+        # x = data.buttons[2] 
+        # y = data.buttons[3]
+        # rt_trigger = data.axes[5]
+
+        # self.pos_stride = (rt_trigger + 1) / 2 * (self.max_pos_stride - self.min_pos_stride) + self.min_pos_stride
+        # self.rot_stride = (rt_trigger + 1) / 2 * (self.max_rot_stride - self.min_rot_stride) + self.min_rot_stride
+
+        # back_button = data.buttons[6]
+        # start_button = data.buttons[7]
+        # big_x = data.buttons[8]
+        # r_stick = data.buttons[10]
+
+        # if r_stick:
+        #     self.r_stick_check += 1
+        # if self.r_stick_check == 1 and self.fr_state and self.franka_pose[0]:
+        #     if self.dialysis_type == self.series_str:
+        #         self.dialysis_type = self.parallel_str
+        #     else:
+        #         self.dialysis_type = self.series_str
+        # self.r_stick_check += 1
+
+        # if not r_stick: self.r_stick_check = 0
+
+        # if start_button:
+        #     self.flag = "list"
+        #     self.made_loop = False
+        #     self.og_set = False
+        #     self.grasp_pose = self.franka_pose
+        #     self.impedance_change_bool_pub.publish(False)
+
+        # if not big_x == self.big_x_prev:
+        #     if big_x and not self.flag == "xbox":
+        #         print(f"XBOXING: {self.flag}")
+        #         self.flag = "xbox"
+        #         self.made_loop = False
+        #         self.og_set = False
+        #         self.grasp_pose = self.franka_pose
+        #         self.curr_transfers = 1
+        #         self.impedance_change_bool_pub.publish(False)
+
+        #     elif big_x and not self.flag == "impedance":
+        #         self.set_to_hand_control()
+        #         if self.transfer_first_grasp_taken:
+        #             self.transfer_first_grasp_taken = False
+        # self.big_x_prev = big_x
+
+        # if back_button:
+        #     with open(self.write_file, 'w') as file:
+        #         file.write("")
+        #     # if I detele the markers, then I also need to clear the grasp list
+        #     self.grasp_loop.grasp_list = []
+        #     self.delete_markers()
+        #     self.repeat_flag = False
+        #     self.repeat_place_flag = False
+        #     self.num_buckets = 0
+        #     self.curr_transfers = 1
+        #     self.transfer_first_grasp_taken = False
+
+        # if y:
+        #     self.y_check += 1
+        # if self.y_check == 1 and self.fr_state and self.franka_pose[0]:
+        #     self.num_buckets += 1
+        #     if not self.transfer_first_grasp_taken:
+        #         print("FIRST GRASP")
+        #         self.transfer_first_grasp_taken = True
+        #         self.transfer_first_z = self.franka_pose[2]
+        #         self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
+        #         self.transfer_first_quat = self.transfer_all_quat
+        #         first_temp = deepcopy(self.franka_pose)
+        #         first_temp[3:] = self.transfer_first_quat
+        #         first_temp[2] = first_temp[2] + self.transfer_z_offset
+        #         self.append_state_to_file(first_temp)
+        #         self.append_grip_action_to_file(self.grasp_loop.release_flag)
+        #         first_temp[2] = first_temp[2] - self.transfer_z_offset
+        #         self.append_state_to_file(first_temp)
+        #         self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
+        #         first_temp[2] = first_temp[2] + self.transfer_z_offset
+        #         self.append_state_to_file(first_temp)
+        #         print(f"GRASP GOAL:{self.grasp_loop.grasp_dict['x_goal']}")
+        #         self.update_mode_and_grasp_visualization()
+        #     else:
+        #         self.update_mode_and_grasp_visualization()
+        #         print("TRANSFER")
+        #         temp_cur_pose = deepcopy(self.franka_pose)
+        #         temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+        #         temp_cur_pose[3:] = self.transfer_first_quat
+        #         self.append_state_to_file(temp_cur_pose)
+        #         temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
+        #         self.append_state_to_file(temp_cur_pose)
+        #         self.append_grip_action_to_file(self.grasp_loop.release_flag)
+        #         temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+        #         self.append_state_to_file(temp_cur_pose)
+        #         temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
+        #         self.append_state_to_file(temp_cur_pose)
+        #         self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
+        #         temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+        #         self.append_state_to_file(temp_cur_pose)
+
+        #     self.grasp_loop.read_file()
+
+        # self.y_check += 1
+
+        # if not y: self.y_check = 0
+
+        # if a:
+        #    self.grip_cur = 0.1
+        # elif b:
+        #    self.grip_cur = 0.01
+
+        # if a or b:
+        #     if (time.time() - self.last_grasp_time) >= 2.0:
+        #         self.move_gripper() 
+        #         self.last_grasp_time = time.time()
 
     def joy_cb(self, data):
         self.joy_data = data
@@ -1014,6 +1165,60 @@ class XboxInput:
             self.on_release()
             if self.grasp_loop.check_next_state(self.error_state):
                 self.wait_for_new_grasp()
+    
+    def keyboard_input(self):
+        msg = EEVelGoals()
+        if not self.og_set:
+            self.og_set = True
+            self.og_trans = copy.deepcopy(self.x_a[:3])
+            self.og_quat = copy.deepcopy(self.x_a[3:])
+
+        if not self.made_loop:
+            self.made_loop = True
+            self.grasp_loop = GraspLoop(self.flag, self.gui_flag, self.grasp_pose, self.og_x_a)
+
+        self.update_mode_and_grasp_visualization()
+        fr_r = R.from_matrix(self.fr_rotation_matrix)
+        self.fr_quat = fr_r.as_quat()
+        fr_e = fr_r.as_euler("xyz", degrees=False)
+        fr_r = R.from_euler("xyz", fr_e, degrees=False)
+        quat_2 = fr_r.as_quat()
+
+        fcl_ee = self.make_ee_sphere()
+        fcl_cone = self.make_fcl_cone()
+
+        self.pub_cone_as_cylinders(self.og_x_a, self.grasp_pose, self.og_quat)
+        self.in_collision = self.check_collide(fcl_ee, self.fr_position, [self.fr_quat[3], self.fr_quat[0], self.fr_quat[1], self.fr_quat[2]]
+                        ,fcl_cone, self.grasp_midpoint[:3], [self.og_quat[3], self.og_quat[0], self.og_quat[1], self.og_quat[2]])
+        
+        self.franka_pose[:3] = self.fr_position
+        self.franka_pose[3:] = self.fr_quat
+
+        self.clamp_linear_position()
+        self.pub_closest_point(self.nearest_cone_points[1])
+        for i in range(self.robot.num_chain):
+            twist = Twist()
+            tolerance = Twist()
+            twist.linear.x = self.linear[0]
+            twist.linear.y = self.linear[1]
+            twist.linear.z = self.linear[2]
+            twist.angular.x = self.angular[0]
+            twist.angular.y = self.angular[1]
+            twist.angular.z = self.angular[2]
+            tolerance.linear.x = 0.0
+            tolerance.linear.y = 0.0
+            tolerance.linear.z = 0.0
+            tolerance.angular.x = 0.0
+            tolerance.angular.y = 0.0
+            tolerance.angular.z = 0.0
+
+            msg.ee_vels.append(twist)
+            msg.tolerances.append(tolerance)
+        self.ee_vel_goals_pub.publish(msg)
+        self.on_release()
+    # create a new function that deletes all of the current markers from marker array so 
+    # they are not visualized in rviz
+
 
     def xbox_input(self):
         msg = EEVelGoals()
@@ -1142,7 +1347,9 @@ class XboxInput:
     def add_text_to_rvis_current_control_state(self):
         # Create a new OverlayText object
         text = OverlayText()
-        robot_dict = {"xbox": "Xbox Control", "list": "Execute saved trajectories", "impedance": "Hand Control"}
+        robot_dict = {"xbox": "Xbox Control", "list": "Execute saved trajectories", 
+                      "impedance": "Hand Control", "keyboard": "wasd Control  ", 
+                      "l-shaped": "L-Shaped Control", "cone": "Cone Control"} 
 
         if self.num_buckets == 0:
             text.text = (
@@ -1213,6 +1420,8 @@ class XboxInput:
         elif self.flag == "impedance":
             self.update_mode_and_grasp_visualization()
             self.grasp_pose = self.franka_pose
+        elif self.flag == "keyboard":
+            self.keyboard_input()
 
         
 
@@ -1251,9 +1460,6 @@ class XboxInput:
     def contact_cb(self, msg):
         if msg.data > 75:
             self.linear[1] -= self.pos_stride * 0.75
-
-    # def gripper_state_cb(self, msg):
-    #     self.grasped = msg.grabbed
 
 if __name__ == '__main__':
     load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"

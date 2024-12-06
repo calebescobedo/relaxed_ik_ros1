@@ -27,8 +27,8 @@ def joint_state_callback(data):
     if recording:
         joint_positions.append(list(data.position[:7]))
         joint_velocities.append(list(data.velocity[:7]))
-        times.append(data.header.stamp.to_sec())
-        print("TIMESTEP", times[0], type(times[0]))
+        #times.append(data.header.stamp.to_sec())
+        #print("TIMESTEP", times[0], type(times[0]))
         #joint_state_data = {
         #    "positions": joint_positions,
         #    "velocities": joint_velocities,
