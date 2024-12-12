@@ -394,7 +394,8 @@ class XboxInput:
     def joy_cb(self, data):
         self.joy_data = data
 
-        if self.flag == "xbox":
+        # Second statement with axes makes it so the left trigger must be depressed to move the robot
+        if self.flag == "xbox" and self.joy_data.axes[2] == -1.0:
             if abs(self.joy_data.axes[1]) > 0.2:
                 self.linear[0] -= self.pos_stride * self.joy_data.axes[1]
             if abs(self.joy_data.axes[0]) > 0.2:
@@ -911,8 +912,6 @@ class XboxInput:
 
                 self.hiro_ee_vel_goals_pub.publish(hiro_msg)
                 rospy.sleep(2)
-            print(f"Num buckets: {self.num_buckets}")
-            print(f"Current transfer #: {self.grasp_loop.curr_transfers}")
             self.grasp_loop.check_next_state(self.error_state)
 
 
