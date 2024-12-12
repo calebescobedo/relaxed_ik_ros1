@@ -11,7 +11,7 @@ rospy.init_node('joint_state_listener')
 joint_states = []
 recording = False 
 
-file_path = "/home/caleb/ros_relaxed_ik_ws/src/relaxed_ik_ros1/scripts/shy.npz"
+file_path = "/home/caleb/ros_relaxed_ik_ws/src/relaxed_ik_ros1/scripts/hesitant.npz"
 global joint_positions
 global joint_velocities
 global times
