@@ -844,16 +844,6 @@ class XboxInput:
         ee = fcl.Sphere(rad)
         return ee
 
-
-        s = np.dot(a - p, d)
-        t = np.dot(p - b, d)
-
-        h = np.maximum.reduce([s, t, 0])
-
-        c = np.cross(p - a, d)
-
-        return abs(np.hypot(h, np.linalg.norm(c)))
-
     def get_norm(self, a, b):
         a_np = np.array(a)
         b_np = np.array(b)
@@ -1124,114 +1114,114 @@ class XboxInput:
             if self.grasp_loop.check_next_state(self.error_state):
                 self.wait_for_new_grasp()
 
-    def l_shaped_movement(self):
-        if self.start_grasp and self.fr_state: 
-            if not self.made_loop:
-                self.made_loop = True
-                self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
+    # def l_shaped_movement(self):
+    #     if self.start_grasp and self.fr_state: 
+    #         if not self.made_loop:
+    #             self.made_loop = True
+    #             self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
                 
 
-            line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
-            hiro_msg = Float64MultiArray()
-            self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
-            hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
-            for x in line:
-                hiro_msg.data.append(x)
-            hiro_msg.data.append(self.cone_radius)
-            hiro_msg.data.append(self.cone_height)
-            hiro_msg.data.append(self.msg_obj_to_line)
-            hiro_msg.data.append(self.msg_cone_start)
-            hiro_msg.data.append(self.og_x_a[0])
-            hiro_msg.data.append(self.og_x_a[1])
-            hiro_msg.data.append(self.og_x_a[2])
-            hiro_msg.data.append(self.grasp_pose[0])
-            hiro_msg.data.append(self.grasp_pose[1])
-            hiro_msg.data.append(self.grasp_pose[2])
+    #         line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
+    #         hiro_msg = Float64MultiArray()
+    #         self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
+    #         hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
+    #         for x in line:
+    #             hiro_msg.data.append(x)
+    #         hiro_msg.data.append(self.cone_radius)
+    #         hiro_msg.data.append(self.cone_height)
+    #         hiro_msg.data.append(self.msg_obj_to_line)
+    #         hiro_msg.data.append(self.msg_cone_start)
+    #         hiro_msg.data.append(self.og_x_a[0])
+    #         hiro_msg.data.append(self.og_x_a[1])
+    #         hiro_msg.data.append(self.og_x_a[2])
+    #         hiro_msg.data.append(self.grasp_pose[0])
+    #         hiro_msg.data.append(self.grasp_pose[1])
+    #         hiro_msg.data.append(self.grasp_pose[2])
 
-            self.hiro_ee_vel_goals_pub.publish(hiro_msg)
-            self.on_release()
+    #         self.hiro_ee_vel_goals_pub.publish(hiro_msg)
+    #         self.on_release()
 
-            if self.grasp_loop.check_next_state(self.error_state):
-                self.wait_for_new_grasp()
+    #         if self.grasp_loop.check_next_state(self.error_state):
+    #             self.wait_for_new_grasp()
 
-    def cone(self):
-        if self.start_grasp and self.fr_state: 
-            if self.grasped:
-                self.x_a = self.grasp_pose
+    # def cone(self):
+    #     if self.start_grasp and self.fr_state: 
+    #         if self.grasped:
+    #             self.x_a = self.grasp_pose
 
-            if not self.made_loop:
-                self.made_loop = True
-                self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
+    #         if not self.made_loop:
+    #             self.made_loop = True
+    #             self.grasp_loop = GraspLoop(self.flag, self.grasp_pose, self.og_x_a)
 
-            grasp_r = R.from_quat(self.x_a[3:])
-            grasp_euler = grasp_r.as_euler('xyz', degrees=False)
+    #         grasp_r = R.from_quat(self.x_a[3:])
+    #         grasp_euler = grasp_r.as_euler('xyz', degrees=False)
 
-            fr_r = R.from_matrix(self.fr_rotation_matrix)
-            fr_quat = fr_r.as_quat()
-            fr_euler = fr_r.as_euler('xyz', degrees=False)
-            fr_euler, fr_quat = self.calc_rotation_sign(fr_euler, grasp_euler)
+    #         fr_r = R.from_matrix(self.fr_rotation_matrix)
+    #         fr_quat = fr_r.as_quat()
+    #         fr_euler = fr_r.as_euler('xyz', degrees=False)
+    #         fr_euler, fr_quat = self.calc_rotation_sign(fr_euler, grasp_euler)
 
-            quat_error, fr_euler = self.quaterion_error(fr_quat=fr_quat, grasp_quat=grasp_r.as_quat(), fr_euler=fr_euler, grasp_euler=grasp_euler)
+    #         quat_error, fr_euler = self.quaterion_error(fr_quat=fr_quat, grasp_quat=grasp_r.as_quat(), fr_euler=fr_euler, grasp_euler=grasp_euler)
 
-            self.rot_error = self._xyz_diff(fr_euler, quat_error)
-            self.rot_error = np.array(self.rot_error) * self.p_r
-            fcl_ee = self.make_ee_sphere()
-            fcl_cone = self.make_fcl_cone()
+    #         self.rot_error = self._xyz_diff(fr_euler, quat_error)
+    #         self.rot_error = np.array(self.rot_error) * self.p_r
+    #         fcl_ee = self.make_ee_sphere()
+    #         fcl_cone = self.make_fcl_cone()
 
-            if not self.og_set:
-                self.og_set = True
-                self.og_trans = self.grasp_midpoint[:3]
-                self.og_quat = self.grasp_midpoint[3:]
+    #         if not self.og_set:
+    #             self.og_set = True
+    #             self.og_trans = self.grasp_midpoint[:3]
+    #             self.og_quat = self.grasp_midpoint[3:]
 
-            if self.start_grasp:
-                self.pub_cone_as_cylinders(self.og_x_a, self.grasp_pose, self.grasp_pose[3:])
-            self.in_collision = self.check_collide(fcl_ee, self.fr_position, [fr_quat[3], fr_quat[0], fr_quat[1], fr_quat[2]]
-                            ,fcl_cone, self.grasp_midpoint[:3], [self.og_quat[3], self.og_quat[0], self.og_quat[1], self.og_quat[2]])
+    #         if self.start_grasp:
+    #             self.pub_cone_as_cylinders(self.og_x_a, self.grasp_pose, self.grasp_pose[3:])
+    #         self.in_collision = self.check_collide(fcl_ee, self.fr_position, [fr_quat[3], fr_quat[0], fr_quat[1], fr_quat[2]]
+    #                         ,fcl_cone, self.grasp_midpoint[:3], [self.og_quat[3], self.og_quat[0], self.og_quat[1], self.og_quat[2]])
 
-            if self.in_collision:
-                self.find_ee_height(self.fr_position, self.og_x_a[:3], self.grasp_pose[:3])
-            else:
-                self.x_c = self.nearest_cone_points[1]
-                self.x_c = np.concatenate((self.x_c, self.og_x_a[3:]))
-                self.grasp_loop.set_x_c(self.x_c)
-                self.grasp_loop.update_grasp_goal()
+    #         if self.in_collision:
+    #             self.find_ee_height(self.fr_position, self.og_x_a[:3], self.grasp_pose[:3])
+    #         else:
+    #             self.x_c = self.nearest_cone_points[1]
+    #             self.x_c = np.concatenate((self.x_c, self.og_x_a[3:]))
+    #             self.grasp_loop.set_x_c(self.x_c)
+    #             self.grasp_loop.update_grasp_goal()
 
-            self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
-            self.pub_closest_point(self.x_c)
+    #         self.error_state = self.grasp_loop.get_curr_error(self.fr_position)
+    #         self.pub_closest_point(self.x_c)
 
-            line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
+    #         line = self.get_unit_line(self.grasp_pose[:3], self.og_x_a[:3])
 
-            hiro_msg = Float64MultiArray()
-            hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
-            self.grasp_loop.add_to_xyz_history(self.fr_position)
-            x_hist, y_hist, z_hist = self.grasp_loop.get_franka_xyz_history()
-            for x in line:
-                hiro_msg.data.append(x)
-            hiro_msg.data.append(self.cone_radius)
-            hiro_msg.data.append(self.cone_height)
-            hiro_msg.data.append(self.msg_obj_to_line)
-            if self.grasp_loop.check_cone_done():
-                hiro_msg.data.append(0.0)
-            else:
-                hiro_msg.data.append(self.msg_cone_start)
-            hiro_msg.data.append(self.og_x_a[0])
-            hiro_msg.data.append(self.og_x_a[1])
-            hiro_msg.data.append(self.og_x_a[2])
-            hiro_msg.data.append(self.grasp_midpoint[0])
-            hiro_msg.data.append(self.grasp_midpoint[1])
-            hiro_msg.data.append(self.grasp_midpoint[2])
-            for x in x_hist:
-                hiro_msg.data.append(x)
-            for y in y_hist:
-                hiro_msg.data.append(y)
-            for z in z_hist:
-                hiro_msg.data.append(z)
+    #         hiro_msg = Float64MultiArray()
+    #         hiro_msg.data = self.get_hiro_error_msg(self.grasp_loop.grasp_dict["x_goal"][3:])
+    #         self.grasp_loop.add_to_xyz_history(self.fr_position)
+    #         x_hist, y_hist, z_hist = self.grasp_loop.get_franka_xyz_history()
+    #         for x in line:
+    #             hiro_msg.data.append(x)
+    #         hiro_msg.data.append(self.cone_radius)
+    #         hiro_msg.data.append(self.cone_height)
+    #         hiro_msg.data.append(self.msg_obj_to_line)
+    #         if self.grasp_loop.check_cone_done():
+    #             hiro_msg.data.append(0.0)
+    #         else:
+    #             hiro_msg.data.append(self.msg_cone_start)
+    #         hiro_msg.data.append(self.og_x_a[0])
+    #         hiro_msg.data.append(self.og_x_a[1])
+    #         hiro_msg.data.append(self.og_x_a[2])
+    #         hiro_msg.data.append(self.grasp_midpoint[0])
+    #         hiro_msg.data.append(self.grasp_midpoint[1])
+    #         hiro_msg.data.append(self.grasp_midpoint[2])
+    #         for x in x_hist:
+    #             hiro_msg.data.append(x)
+    #         for y in y_hist:
+    #             hiro_msg.data.append(y)
+    #         for z in z_hist:
+    #             hiro_msg.data.append(z)
 
 
-            self.hiro_ee_vel_goals_pub.publish(hiro_msg)
-            self.on_release()
-            if self.grasp_loop.check_next_state(self.error_state):
-                self.wait_for_new_grasp()
+    #         self.hiro_ee_vel_goals_pub.publish(hiro_msg)
+    #         self.on_release()
+    #         if self.grasp_loop.check_next_state(self.error_state):
+    #             self.wait_for_new_grasp()
 
     def xbox_input(self):
         msg = EEVelGoals()
@@ -1436,10 +1426,10 @@ class XboxInput:
             self.linear_movement()
         elif self.flag == "xbox":
             self.xbox_input()
-        elif self.flag == "l-shaped":
-            self.l_shaped_movement()
-        elif self.flag == "cone":
-            self.cone()
+        # elif self.flag == "l-shaped":
+        #     self.l_shaped_movement()
+        # elif self.flag == "cone":
+        #     self.cone()
         elif self.flag == "list":
             self.move_through_list()
         elif self.flag == "octo":

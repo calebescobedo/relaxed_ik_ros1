@@ -15,7 +15,7 @@
     </node>
     
     <node pkg="joy" type="joy_node" name="joy" output="screen">
-        <param name="autorepeat_rate" value="100"/>
+        <param name="autorepeat_rate" value="1"/>
     </node>
     <include file="$(find timed_roslaunch)/launch/timed_roslaunch.launch">
         <arg name="time" value="1" />
