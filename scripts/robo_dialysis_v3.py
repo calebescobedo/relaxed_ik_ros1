@@ -72,7 +72,7 @@ class GraspLoop:
         self.__wait_flag = [2]
         self.__end_flag = [3]
         self.cur_list_idx = 0
-        self.error_bound = 0.006
+        self.error_bound = 0.002
         self.end_flag = False
         self.repeat_flag = False
         self.repeat_place_flag = False
@@ -107,7 +107,7 @@ class GraspLoop:
 
     def xyz_diff(self, start_pose, end_pose):
         self.p_t = 0.1
-        self.grasp_dict["x_goal"] = self.read_octo_file_list()
+        # self.grasp_dict["x_goal"] = self.read_octo_file_list()
         goal = self.grasp_dict["x_goal"]
         difference = [0.0, 0.0, 0.0]
         difference[0] = (goal[0] - start_pose[0]) * self.p_t 
@@ -262,13 +262,14 @@ class GraspLoop:
 
     def is_in_error_bound(self, error):
         error_sum = sum([abs(elem) for elem in error])
+        print("ERROR SUM: ", error_sum)
         if error_sum < self.error_bound:
             return True
         else:
             return False
 
     def check_next_state(self, error):
-        self.z_force_drop_bound = 0.05
+        self.z_force_drop_bound = 0.0005
         ret = False
         if self.is_in_error_bound(error):
             if not self.__pose_order_list:
@@ -359,8 +360,8 @@ class XboxInput:
         self.joint_angle_solutions_pub = rospy.Publisher('/relaxed_ik/reset', JointState, queue_size=1)
         
         if self.flag == "xbox":
-            self.pos_stride = 0.003
-            self.rot_stride = 0.009 
+            self.pos_stride = 0.004
+            self.rot_stride = 0.010 
         if self.flag == "octo" or self.flag == "octolist":
             self.pos_stride = 0.0001
             self.rot_stride = 0.0001
@@ -374,8 +375,8 @@ class XboxInput:
         self.max_rot_stride = 0.001875
         
         # self.p_t = 0.0028
-        self.p_t = 0.001
-        self.p_r = 0.001
+        self.p_t = 0.04
+        self.p_r = 0.007
         if flag == "octolist":
             self.p_t = 0.005
             self.p_r = 0.005
@@ -384,7 +385,7 @@ class XboxInput:
         self.z_offset = 0.0
         self.y_offset = 0.0
         self.x_offset = 0.0
-        self.transfer_z_offset = 0.2 #cm above the grasp location
+        self.transfer_z_offset = 0.2 #m above the grasp location
         self.transfer_first_quat = [0.0, 0.0, 0.0, 1.0]
         self.transfer_first_z = 0.0
         self.transfer_first_grasp_taken = False
@@ -471,7 +472,7 @@ class XboxInput:
         self.joy_data = data
 
         # Second statement with axes makes it so the left trigger must be depressed to move the robot
-        if self.flag == "xbox" and self.joy_data.axes[2] == -1.0:
+        if self.flag == "xbox":
             if abs(self.joy_data.axes[1]) > 0.2:
                 self.linear[0] -= self.pos_stride * self.joy_data.axes[1]
             if abs(self.joy_data.axes[0]) > 0.2:
@@ -1491,7 +1492,8 @@ class XboxInput:
             self.linear[1] -= self.pos_stride * 0.75
 
 if __name__ == '__main__':
-    load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
+    # load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
+    load_file = "/home/caleb/robochem_steps/example_transfers.txt"
     # with open(load_file, 'w') as file:
     #     file.write("")
     flag = rospy.get_param("/xbox_input/flag")
