@@ -46,7 +46,7 @@ class GraspLoop:
                  drop_pose = [0.23127, -0.5581, 0.31198, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
                  cone_radius=0.25, cone_height=0.25):
         # self.grasp_list = []
-        self.load_file = "/home/caleb/robochem_steps/example_transfer.txt"
+        self.load_file = "/home/caleb/robochem_steps/transfer_w_jig.txt"
         self.octo_file = "/home/caleb/robochem_steps/fixed_octo_action.txt"
         # self.octo_file = "/home/caleb/robochem_steps/octo_action.txt"
 
@@ -72,7 +72,9 @@ class GraspLoop:
         self.__wait_flag = [2]
         self.__end_flag = [3]
         self.cur_list_idx = 0
-        self.error_bound = 0.002
+        self.error_bound = 0.001
+        self.error_bound_far = 0.003
+    
         self.end_flag = False
         self.repeat_flag = False
         self.repeat_place_flag = False
@@ -269,7 +271,7 @@ class GraspLoop:
             return False
 
     def check_next_state(self, error):
-        self.z_force_drop_bound = 0.0005
+        self.z_force_drop_bound = 0.003
         ret = False
         if self.is_in_error_bound(error):
             if not self.__pose_order_list:
@@ -326,7 +328,7 @@ class GraspLoop:
     
     def fr_ext_cb(self, data):
         self.ext_force = data.wrench.force.z
-        if self.ext_force >= 1.0:
+        if self.ext_force >= 7.0:
             self.z_force_release_flag = True
         else:
             self.z_force_release_flag = False
@@ -343,7 +345,7 @@ class XboxInput:
 
         setting_file_path = default_setting_file_path
 
-        self.write_file = "/home/caleb/robochem_steps/example_transfer.txt"
+        self.write_file = "/home/caleb/robochem_steps/transfer_w_jig.txt"
 
         self.robot = Robot(setting_file_path)
         self.grasped = False
@@ -385,7 +387,7 @@ class XboxInput:
         self.z_offset = 0.0
         self.y_offset = 0.0
         self.x_offset = 0.0
-        self.transfer_z_offset = 0.2 #m above the grasp location
+        self.transfer_z_offset = 0.26 #m above the grasp location
         self.transfer_first_quat = [0.0, 0.0, 0.0, 1.0]
         self.transfer_first_z = 0.0
         self.transfer_first_grasp_taken = False
@@ -1493,7 +1495,7 @@ class XboxInput:
 
 if __name__ == '__main__':
     # load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
-    load_file = "/home/caleb/robochem_steps/example_transfers.txt"
+    load_file = "/home/caleb/robochem_steps/transfer_w_jig.txt"
     # with open(load_file, 'w') as file:
     #     file.write("")
     flag = rospy.get_param("/xbox_input/flag")
