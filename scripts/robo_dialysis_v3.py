@@ -46,7 +46,7 @@ class GraspLoop:
                  drop_pose = [0.23127, -0.5581, 0.31198, 0.9994651, -0.00187451, 0.0307489, -0.01097748], 
                  cone_radius=0.25, cone_height=0.25):
         # self.grasp_list = []
-        self.load_file = "/home/caleb/robochem_steps/transfer_w_jig.txt"
+        self.load_file = "/home/caleb/robochem_steps/transfer_wo_jig.txt"
         self.octo_file = "/home/caleb/robochem_steps/fixed_octo_action.txt"
         # self.octo_file = "/home/caleb/robochem_steps/octo_action.txt"
 
@@ -345,7 +345,7 @@ class XboxInput:
 
         setting_file_path = default_setting_file_path
 
-        self.write_file = "/home/caleb/robochem_steps/transfer_w_jig.txt"
+        self.write_file = "/home/caleb/robochem_steps/transfer_wo_jig.txt"
 
         self.robot = Robot(setting_file_path)
         self.grasped = False
@@ -567,41 +567,43 @@ class XboxInput:
             self.y_check += 1
         if self.y_check == 1 and self.fr_state and self.franka_pose[0]:
             self.num_buckets += 1
-            if not self.transfer_first_grasp_taken:
-                print("FIRST GRASP")
-                self.transfer_first_grasp_taken = True
-                self.transfer_first_z = self.franka_pose[2]
-                self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
-                self.transfer_first_quat = self.transfer_all_quat
-                first_temp = deepcopy(self.franka_pose)
-                first_temp[3:] = self.transfer_first_quat
-                first_temp[2] = first_temp[2] + self.transfer_z_offset
-                self.append_state_to_file(first_temp)
-                self.append_grip_action_to_file(self.grasp_loop.release_flag)
-                first_temp[2] = first_temp[2] - self.transfer_z_offset
-                self.append_state_to_file(first_temp)
-                self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
-                first_temp[2] = first_temp[2] + self.transfer_z_offset
-                self.append_state_to_file(first_temp)
-                print(f"GRASP GOAL:{self.grasp_loop.grasp_dict['x_goal']}")
-                self.update_mode_and_grasp_visualization()
-            else:
-                self.update_mode_and_grasp_visualization()
-                print("TRANSFER")
-                temp_cur_pose = deepcopy(self.franka_pose)
-                temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
-                temp_cur_pose[3:] = self.transfer_first_quat
-                self.append_state_to_file(temp_cur_pose)
-                temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
-                self.append_state_to_file(temp_cur_pose)
-                self.append_grip_action_to_file(self.grasp_loop.release_flag)
-                temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
-                self.append_state_to_file(temp_cur_pose)
-                temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
-                self.append_state_to_file(temp_cur_pose)
-                self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
-                temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
-                self.append_state_to_file(temp_cur_pose)
+            # commented out by Noah - remove gripper open before first bucket transfer
+            # if not self.transfer_first_grasp_taken:
+            #     print("FIRST GRASP")
+            #     self.transfer_first_grasp_taken = True
+            #     self.transfer_first_z = self.franka_pose[2]
+            #     self.transfer_all_quat = [0.9999914970512331, -0.0023646880938439966, 0.002833256283750675, -0.0018403082033183569]
+            #     self.transfer_first_quat = self.transfer_all_quat
+            #     first_temp = deepcopy(self.franka_pose)
+            #     first_temp[3:] = self.transfer_first_quat
+            #     first_temp[2] = first_temp[2] + self.transfer_z_offset
+            #     self.append_state_to_file(first_temp)
+            #     self.append_grip_action_to_file(self.grasp_loop.release_flag)
+            #     first_temp[2] = first_temp[2] - self.transfer_z_offset
+            #     self.append_state_to_file(first_temp)
+            #     self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
+            #     first_temp[2] = first_temp[2] + self.transfer_z_offset
+            #     self.append_state_to_file(first_temp)
+            #     print(f"GRASP GOAL:{self.grasp_loop.grasp_dict['x_goal']}")
+            #     self.update_mode_and_grasp_visualization()
+            # else:
+
+            self.update_mode_and_grasp_visualization()
+            print("TRANSFER")
+            temp_cur_pose = deepcopy(self.franka_pose)
+            temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+            temp_cur_pose[3:] = self.transfer_first_quat
+            self.append_state_to_file(temp_cur_pose)
+            temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
+            self.append_state_to_file(temp_cur_pose)
+            self.append_grip_action_to_file(self.grasp_loop.release_flag)
+            temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+            self.append_state_to_file(temp_cur_pose)
+            temp_cur_pose[2] = temp_cur_pose[2] - self.transfer_z_offset
+            self.append_state_to_file(temp_cur_pose)
+            self.append_grip_action_to_file(self.grasp_loop.grasp_flag)
+            temp_cur_pose[2] = temp_cur_pose[2] + self.transfer_z_offset
+            self.append_state_to_file(temp_cur_pose)
 
             self.grasp_loop.read_file()
 
@@ -1495,7 +1497,7 @@ class XboxInput:
 
 if __name__ == '__main__':
     # load_file = "/home/caleb/robochem_steps/v2_temp_grasps.txt"
-    load_file = "/home/caleb/robochem_steps/transfer_w_jig.txt"
+    load_file = "/home/caleb/robochem_steps/transfer_wo_jig.txt"
     # with open(load_file, 'w') as file:
     #     file.write("")
     flag = rospy.get_param("/xbox_input/flag")
